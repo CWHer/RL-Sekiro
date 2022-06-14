@@ -1,7 +1,7 @@
 .vscode/
 
 # observation 
-screen-shot.png
+screen-shot-*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
