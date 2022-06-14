@@ -26,10 +26,12 @@ class Observer():
         self.anchor = (anchor.left, anchor.top, anchor.right, anchor.bottom)
         logging.debug(anchor)
 
-    @timeLog
+    # @timeLog
     def shotScreen(self) -> npt.NDArray[np.int8]:
         screen_shot = ImageGrab.grab(self.anchor)
         if ic.enabled:
-            screen_shot.save("screen-shot.png")
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%m-%d_%H-%M-%S")
+            screen_shot.save(f"screen-shot-{timestamp}.png")
 
         return np.array(screen_shot, dtype=np.int8)
