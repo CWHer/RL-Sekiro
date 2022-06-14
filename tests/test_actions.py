@@ -26,13 +26,13 @@ if __name__ == "__main__":
 
     actor = Actor(handle)
 
-    actor.envAction("resume")
-    actor.envAction("focus")
+    actor.envAction("resume", action_delay=True)
+    actor.envAction("focus", action_delay=True)
 
-    actor.agentAction("attack")
-    actor.agentAction("defense")
-    actor.agentAction("dodge")
-    actor.agentAction("jump")
+    actor.agentAction("attack", action_delay=True)
+    actor.agentAction("defense", action_delay=True)
+    actor.agentAction("dodge", action_delay=True)
+    actor.agentAction("jump", action_delay=True)
 
-    actor.envAction("revive")
+    actor.envAction("revive", action_delay=True)
     actor.envAction("pause")
