@@ -2,6 +2,7 @@ import logging
 import time
 from typing import List, Tuple
 
+import numpy as np
 import win32con
 import win32gui
 from utils import timeLog
@@ -31,14 +32,24 @@ class SekiroEnv():
 
     def __stepReward(self, state: Tuple) -> float:
         agent_hp, boss_hp, agent_ep, boss_ep = state[1:]
-        # TODO
-        reward = 0
+        # TODO: refine reward
+        rewards = np.array(
+            [agent_hp - self.last_agent_hp,
+             self.last_boss_hp - boss_hp,
+             min(0, self.last_agent_ep - agent_ep),
+             max(0, boss_ep - self.last_boss_ep)])
+        weights = np.array([0.2, 0.2, 0.1, 0.1])
+        reward = weights.dot(rewards).item()
+
+        reward = -100 if agent_hp == 0 else reward
+        reward = 100 if boss_hp == 0 else reward
 
         self.last_agent_hp = agent_hp
         self.last_agent_ep = agent_ep
         self.last_boss_hp = boss_hp
         self.last_boss_ep = boss_ep
 
+        logging.info(f"reward: {reward:<.2f}")
         return reward
 
     @timeLog
@@ -69,6 +80,10 @@ class SekiroEnv():
             self.actor.envAction(
                 "revive", action_delay=REVIVE_DELAY)
             self.actor.envAction("pause")
+
+        if state[2] == 0:
+            # TODO: succeed
+            raise NotImplementedError()
 
         return state, self.__stepReward(state), done, None
 

@@ -11,7 +11,8 @@ from PIL import Image, ImageGrab
 from utils import timeLog
 
 from .env_config import (AGENT_EP_ANCHOR, AGENT_HP_ANCHOR, BOSS_EP_ANCHOR,
-                         BOSS_HP_ANCHOR, SCREEN_ANCHOR, SCREEN_SIZE)
+                         BOSS_HP_ANCHOR, FOCUS_ANCHOR, FOCUS_SIZE,
+                         SCREEN_ANCHOR, SCREEN_SIZE)
 
 
 class Observer():
@@ -84,7 +85,8 @@ class Observer():
             logging.critical("incorrect arr shape")
             raise RuntimeError()
 
-        result = np.max(np.abs(target - arr), axis=0) < (threshold * 256)
+        result: npt.NDArray[np.bool_] = np.max(
+            np.abs(target - arr), axis=0) < (threshold * 256)
         if ic.enabled:
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots(2, 1)
@@ -130,6 +132,11 @@ class Observer():
             target=self.boss_ep_full, threshold=0.45, prefix="boss-ep")
         logging.info(f"agent ep: {agent_ep:.1f}, boss ep: {boss_ep:.1f}")
 
-        # TODO: resize screen_shot
+        focus_area = Image.fromarray(self.__select(
+            screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8))
+        if ic.enabled:
+            focus_area.save(f"./debug/focus-{self.timestamp}.png")
+        focus_area = np.array(focus_area.resize(
+            FOCUS_SIZE), dtype=np.uint8).transpose(2, 0, 1)
 
-        return screen_shot, agent_hp, boss_hp, agent_ep, boss_ep
+        return focus_area, agent_hp, boss_hp, agent_ep, boss_ep
