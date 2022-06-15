@@ -1,7 +1,9 @@
 import logging
 
+import numpy as np
 import win32gui
 from icecream import ic
+from PIL import Image
 
 from env.env_config import GAME_NAME
 from env.observation import Observer
@@ -17,3 +19,7 @@ if __name__ == "__main__":
 
     observer = Observer(handle)
     observer.shotScreen()
+
+    screen_shot = Image.open("./debug/screen-shot.png")
+    screen_shot = np.array(screen_shot, dtype=np.uint8).transpose(2, 0, 1)
+    observer.state(screen_shot)
