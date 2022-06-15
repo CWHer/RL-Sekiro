@@ -11,7 +11,9 @@ if __name__ == "__main__":
 
     env = SekiroEnv()
 
-    state = env.reset()
     for _ in range(20):
-        action = random.choice(env.actionSpace())
-        state, reward, done, _ = env.step(action)
+        done = False
+        state = env.reset()
+        while not done:
+            action = random.choice(env.actionSpace())
+            state, reward, done, _ = env.step(action)
