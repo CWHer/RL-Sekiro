@@ -23,7 +23,8 @@ def playGame(agent, seed: int) -> Tuple[List, float]:
     total_reward, done = 0, False
 
     while not done:
-        action = agent.selectAction(state, env.action_space)
+        action = agent.selectAction(
+            state, tuple(range(env.action_space.n)))
         next_state, reward, done, _ = env.step(action)
         total_reward += reward
 

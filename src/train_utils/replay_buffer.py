@@ -4,20 +4,20 @@ from collections import deque, namedtuple
 
 import numpy as np
 import torch
-from config import TRAIN_CONFIG
+from config import DATA_CONFIG
 
 
 class ReplayBuffer():
     Data = namedtuple("data", "state reward action next_state done")
 
     def __init__(self) -> None:
-        self.buffer = deque(maxlen=TRAIN_CONFIG.replay_size)
+        self.buffer = deque(maxlen=DATA_CONFIG.replay_size)
 
     def size(self) -> int:
         return len(self.buffer)
 
     def save(self, version):
-        dataset_dir = TRAIN_CONFIG.dataset_dir
+        dataset_dir = DATA_CONFIG.dataset_dir
 
         import os
         if not os.path.exists(dataset_dir):
@@ -37,7 +37,7 @@ class ReplayBuffer():
         """[summary]
         whether data is enough to start training
         """
-        return self.size() > TRAIN_CONFIG.thr
+        return self.size() > DATA_CONFIG.train_thr
 
     def __enhanceData(self,
                       states, rewards, actions,
@@ -47,12 +47,12 @@ class ReplayBuffer():
         return enhanced_data
 
     def add(self, episode_data):
-        enhanced_data = self.__enhanceData(*episode_data)
-        self.buffer.extend(enhanced_data)
+        # enhanced_data = self.__enhanceData(*episode_data)
+        self.buffer.extend(episode_data)
 
     def sample(self):
         indices = np.random.choice(
-            len(self.buffer), TRAIN_CONFIG.batch_size)
+            len(self.buffer), DATA_CONFIG.batch_size)
         data_batch = map(
             lambda x: torch.as_tensor(np.stack(x)),
             zip(*[self.buffer[i] for i in indices]))
