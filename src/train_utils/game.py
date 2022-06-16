@@ -37,4 +37,4 @@ def playGame(agent, seed: int) -> Tuple[List, float]:
         # env.render()
 
     # env.close()
-    return data_buffer, total_reward
+    return data_buffer, env.getScore()

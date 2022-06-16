@@ -28,6 +28,11 @@ class SekiroEnv():
         self.last_boss_hp = 0
         self.last_boss_ep = 0
 
+        self.init_boss_hp = 0
+
+    def getScore(self) -> float:
+        return self.init_boss_hp - self.last_boss_hp
+
     def actionSpace(self) -> List[int]:
         return list(range(len(AGENT_KEYMAP)))
 
@@ -39,10 +44,10 @@ class SekiroEnv():
              self.last_boss_hp - boss_hp,
              min(0, self.last_agent_ep - agent_ep),
              max(0, boss_ep - self.last_boss_ep)])
-        weights = np.array([0.5, 0.4, 0.1, 0.1])
+        weights = np.array([0.1, 0.25, 0.05, 0.05])
         reward = weights.dot(rewards).item()
 
-        reward = -100 if agent_hp < 0.1 else reward
+        reward = -20 if agent_hp < 0.1 else reward
 
         self.last_agent_hp = agent_hp
         self.last_agent_ep = agent_ep
@@ -77,15 +82,16 @@ class SekiroEnv():
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
 
+        # NOTE: agent dead
         done = state[1] < 0.1
         if done:
             time.sleep(10)
             self.actor.envAction("focus", action_delay=REVIVE_DELAY)
-            self.actor.envAction("revive", action_delay=REVIVE_DELAY * 1.5)
-            self.actor.envAction("pause", action_delay=REVIVE_DELAY)
+            self.actor.envAction("revive", action_delay=1.5 * REVIVE_DELAY)
+            self.actor.envAction("pause", action_delay=2 * REVIVE_DELAY)
 
-        if state[2] == 0:
-            # TODO: succeed
+        # NOTE: boss dead
+        if state[2] < 0.1:
             raise NotImplementedError()
 
         return state, self.__stepReward(state), done, None
@@ -105,5 +111,6 @@ class SekiroEnv():
         state = self.observer.state(screen_shot)
         self.last_agent_hp, self.last_boss_hp, \
             self.last_agent_ep, self.last_boss_ep = state[1:]
+        self.init_boss_hp = self.last_boss_hp
 
         return state

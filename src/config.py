@@ -16,14 +16,14 @@ AGENT_CONFIG = {
 
     # optimizer
     "learning_rate": 0.001,
-    "l2_weight": 0,
+    "l2_weight": 1e-4,
 
     # soft update
     "tau": 0.1,
 
     # epsilon-greedy
     "init_epsilon": 0.5,
-    "min_epsilon": 0.01,
+    "min_epsilon": 0.1,
     "delta_epsilon": 0.01
 }
 
@@ -48,7 +48,7 @@ TRAIN_CONFIG = {
     "n_game": 1,
 
     # update the model
-    "train_epochs": 1,
+    "train_epochs": 2,
 
     # evaluate
     # NOTE: current_reward >= best_reward * update_thr
