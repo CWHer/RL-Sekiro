@@ -1,9 +1,9 @@
 import logging
 import pickle
 from collections import deque, namedtuple
+from typing import Tuple
 
 import numpy as np
-import torch
 from config import DATA_CONFIG
 
 
@@ -50,10 +50,8 @@ class ReplayBuffer():
         # enhanced_data = self.__enhanceData(*episode_data)
         self.buffer.extend(episode_data)
 
-    def sample(self):
+    def sample(self) -> Tuple:
         indices = np.random.choice(
             len(self.buffer), DATA_CONFIG.batch_size)
-        data_batch = map(
-            lambda x: torch.as_tensor(np.stack(x)),
-            zip(*[self.buffer[i] for i in indices]))
-        return list(data_batch)
+        data_batch = zip(*[self.buffer[i] for i in indices])
+        return tuple(data_batch)

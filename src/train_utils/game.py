@@ -1,9 +1,9 @@
 import random
 from typing import List, Tuple
 
-import gym
 import numpy as np
 import torch
+from env import SekiroEnv
 
 
 def playGame(agent, seed: int) -> Tuple[List, float]:
@@ -18,13 +18,13 @@ def playGame(agent, seed: int) -> Tuple[List, float]:
     random.seed(seed)
 
     data_buffer = []
-    env = gym.make("CartPole-v1")
+    env = SekiroEnv()
     state = env.reset()
     total_reward, done = 0, False
 
     while not done:
-        action = agent.selectAction(
-            state, tuple(range(env.action_space.n)))
+        # action = random.choice(env.actionSpace())
+        action = agent.selectAction(state, env.actionSpace())
         next_state, reward, done, _ = env.step(action)
         total_reward += reward
 
@@ -36,5 +36,5 @@ def playGame(agent, seed: int) -> Tuple[List, float]:
         # debug
         # env.render()
 
-    env.close()
+    # env.close()
     return data_buffer, total_reward

@@ -2,6 +2,7 @@ import logging
 import random
 from functools import partial
 
+from icecream import ic
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -89,6 +90,7 @@ class Trainer():
 
 
 if __name__ == "__main__":
+    ic.disable()
     logging.basicConfig(level=logging.INFO)
 
     trainer = Trainer(loc="cuda:0")

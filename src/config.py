@@ -3,15 +3,16 @@ from collections import namedtuple
 AGENT_CONFIG = {
     "checkpoint_dir": "checkpoint",
 
-    "action_size": 2,
+    "action_size": 4,
     "gamma": 0.98,
 
     # features
     # "n_periods": 4,
 
     # AGENT architecture
-    "n_res": 10,
-    "n_channels": 128,
+    "in_channels": 5,
+    "n_res": 5,
+    "n_channels": 64,
 
     # optimizer
     "learning_rate": 0.001,
@@ -32,8 +33,8 @@ DATA_CONFIG = {
     "replay_size": 20000,
 
     # sample
-    "train_thr": 100,
-    "batch_size": 64,
+    "train_thr": 50,
+    "batch_size": 32,
 }
 
 TRAIN_CONFIG = {
@@ -41,13 +42,13 @@ TRAIN_CONFIG = {
     "log_dir": "logs/",
 
     # total
-    "epochs": 200,
+    "epochs": 500,
 
     # explore the environment
     "n_game": 1,
 
     # update the model
-    "train_epochs": 20,
+    "train_epochs": 1,
 
     # evaluate
     # NOTE: current_reward >= best_reward * update_thr
