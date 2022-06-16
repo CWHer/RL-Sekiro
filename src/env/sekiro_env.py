@@ -78,12 +78,12 @@ class SekiroEnv():
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
 
-        done = state[1] == 0
+        done = state[1] < 0.1
         if done:
-            time.sleep(10)
-            self.actor.envAction(
-                "revive", action_delay=REVIVE_DELAY)
-            self.actor.envAction("pause")
+            time.sleep(8)
+            self.actor.envAction("focus", action_delay=REVIVE_DELAY)
+            self.actor.envAction("revive", action_delay=REVIVE_DELAY * 1.5)
+            self.actor.envAction("pause", action_delay=REVIVE_DELAY)
 
         if state[2] == 0:
             # TODO: succeed
@@ -101,7 +101,6 @@ class SekiroEnv():
         time.sleep(0.5)
 
         self.actor.envAction("resume", action_delay=True)
-        self.actor.envAction("focus")
 
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
