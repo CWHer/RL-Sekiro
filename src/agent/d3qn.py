@@ -1,46 +1,21 @@
 import random
-from typing import List
+from typing import Tuple
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from config import AGENT_CONFIG
+from utils import timeLog
 
-
-class VANet(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        self.common_layers = nn.Sequential(
-            nn.Linear(4, 64), nn.ReLU(),
-            nn.Linear(64, 64), nn.ReLU(),
-            nn.Linear(64, 64), nn.ReLU(),
-        )
-
-        # A head
-        self.A_output = nn.Sequential(
-            nn.Linear(64, AGENT_CONFIG.action_size)
-        )
-
-        # V head
-        self.V_output = nn.Sequential(
-            nn.Linear(64, 1),
-        )
-
-    def forward(self, x):
-        x = self.common_layers(x)
-        A = self.A_output(x)
-        V = self.V_output(x)
-        Q = V + A - A.mean(dim=1).view(-1, 1)
-        return Q
+from .d3qn_utils import Encoder, VANet
 
 
 class D3QN():
     def __init__(self) -> None:
         self.device = torch.device("cpu")
 
+        self.encoder = Encoder()
         self.q_net = VANet().to(self.device)
         # NOTE: target net is used for training
         self.target_net = VANet().to(self.device)
@@ -96,8 +71,7 @@ class D3QN():
                 param.data * AGENT_CONFIG.tau)
 
     def predict(self, features):
-        # TODO
-        if features.ndim < 2:
+        if features.ndim < 4:
             features = np.expand_dims(features, 0)
 
         features = torch.as_tensor(
@@ -106,28 +80,34 @@ class D3QN():
             q_values = self.q_net(features)
         return q_values.detach().cpu().numpy()
 
-    def selectAction(self, features, actions):
+    @timeLog
+    def selectAction(self, states, actions):
         def epsilonGreedy(q_values, actions, epsilon):
             return random.choice(actions) \
                 if np.random.rand() < epsilon \
                 else actions[q_values.argmax(axis=1).item()]
+        features = self.encoder.encode(states)
         q_values = self.predict(features)
         action = epsilonGreedy(q_values, actions, self.epsilon)
         return action
 
-    def trainStep(self, data_batch: List) -> float:
+    def trainStep(self, data_batch: Tuple) -> float:
         """[summary]
 
         Returns:
             loss
         """
-        states, rewards, actions, next_states, dones = \
-            map(lambda x: x.to(self.device), data_batch)
-        states = states.float()
-        rewards = rewards.view(-1, 1).float()
-        actions = actions.view(-1, 1).long()
-        next_states = next_states.float()
-        dones = dones.view(-1, 1).float()
+        states, rewards, actions, next_states, dones = data_batch
+        states = torch.as_tensor(np.stack(
+            [self.encoder.encode(state) for state in states])).to(self.device)
+        rewards = torch.as_tensor(
+            np.stack(rewards)).float().view(-1, 1).to(self.device)
+        actions = torch.as_tensor(
+            np.stack(actions)).long().view(-1, 1).to(self.device)
+        next_states = torch.as_tensor(np.stack(
+            [self.encoder.encode(state) for state in next_states])).to(self.device)
+        dones = torch.as_tensor(
+            np.stack(dones)).float().view(-1, 1).to(self.device)
 
         q_values = self.q_net(states).gather(1, actions)
 
