@@ -33,13 +33,13 @@ while not done:
 
 - State
 
-  | Variable        | Type                    | Description    |
-  | --------------- | ----------------------- | -------------- |
-  | focus area      | `npt.NDArray[np.uint8]` | 截图的中心区域 |
-  | agent hp        | `float`                 | 生命值         |
-  | boss hp         | `float`                 |                |
-  | agent endurance | `float`                 | 耐力值         |
-  | boss endurance  | `float`                 |                |
+  | Variable        | Type                    | Description              |
+  | --------------- | ----------------------- | ------------------------ |
+  | focus area      | `npt.NDArray[np.uint8]` | 截图的中心区域，灰度图像 |
+  | agent hp        | `float`                 | 生命值                   |
+  | boss hp         | `float`                 |                          |
+  | agent endurance | `float`                 | 耐力值                   |
+  | boss endurance  | `float`                 |                          |
 
 - Actions
 
