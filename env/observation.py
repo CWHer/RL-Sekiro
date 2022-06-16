@@ -133,10 +133,10 @@ class Observer():
         logging.info(f"agent ep: {agent_ep:.1f}, boss ep: {boss_ep:.1f}")
 
         focus_area = Image.fromarray(self.__select(
-            screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8))
+            screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8)).convert("L")
         if ic.enabled:
             focus_area.save(f"./debug/focus-{self.timestamp}.png")
-        focus_area = np.array(focus_area.resize(
-            FOCUS_SIZE), dtype=np.uint8).transpose(2, 0, 1)
+        focus_area = np.array(
+            focus_area.resize(FOCUS_SIZE), dtype=np.uint8)
 
         return focus_area, agent_hp, boss_hp, agent_ep, boss_ep
