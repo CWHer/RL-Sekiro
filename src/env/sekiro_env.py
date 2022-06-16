@@ -3,6 +3,7 @@ import time
 from typing import List, Tuple
 
 import numpy as np
+import numpy.typing as npt
 import win32con
 import win32gui
 from utils import timeLog
@@ -27,8 +28,8 @@ class SekiroEnv():
         self.last_boss_hp = 0
         self.last_boss_ep = 0
 
-    def actionSpace(self) -> List[str]:
-        return list(AGENT_KEYMAP.keys())
+    def actionSpace(self) -> List[int]:
+        return list(range(len(AGENT_KEYMAP)))
 
     def __stepReward(self, state: Tuple) -> float:
         agent_hp, boss_hp, agent_ep, boss_ep = state[1:]
@@ -53,11 +54,13 @@ class SekiroEnv():
         return reward
 
     @timeLog
-    def step(self, action) -> Tuple[Tuple, float, bool, None]:
+    def step(self, action: int) -> Tuple[Tuple[npt.NDArray[np.uint8],
+                                               float, float, float, float],
+                                         float, bool, None]:
         """[summary]
 
         State:
-            image           npt.NDArray[np.uint8]
+            focus_area      npt.NDArray[np.uint8], "L"
             agent_hp        float
             boss_hp         float
             agent_ep        float
@@ -69,7 +72,8 @@ class SekiroEnv():
             done            bool
             info            None
         """
-        self.actor.agentAction(action)
+        action_key = list(AGENT_KEYMAP.keys())[action]
+        self.actor.agentAction(action_key)
 
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
@@ -87,7 +91,8 @@ class SekiroEnv():
 
         return state, self.__stepReward(state), done, None
 
-    def reset(self) -> Tuple:
+    def reset(self) -> Tuple[npt.NDArray[np.uint8],
+                             float, float, float, float]:
         # restore window
         win32gui.SendMessage(self.handle, win32con.WM_SYSCOMMAND,
                              win32con.SC_RESTORE, 0)
