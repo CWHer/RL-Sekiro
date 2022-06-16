@@ -3,6 +3,18 @@
 # observation 
 debug/
 
+# replay buffer
+dataset/
+
+# model
+checkpoint/
+
+# tensorboard
+logs/
+
+# parameters
+parameters/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
