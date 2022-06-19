@@ -115,9 +115,9 @@ class Observer():
         boss_hp = self.__calcProperty(
             arr=self.__select(hsv_screen_shot, BOSS_HP_ANCHOR),
             target=self.boss_hp_full, threshold=0.4, prefix="boss-hp")
-        logging.info(f"agent hp: {agent_hp:.1f}, "
-                     f"agent ep: {agent_ep:.1f}, "
-                     f"boss hp: {boss_hp:.1f}")
+        logging.info(f"agent hp: {agent_hp:.4f}, "
+                     f"agent ep: {agent_ep:.4f}, "
+                     f"boss hp: {boss_hp:.4f}")
 
         focus_area = Image.fromarray(self.__select(
             screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8)).convert("L")

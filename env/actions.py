@@ -8,8 +8,7 @@ from .keyboard import PressKey, ReleaseKey
 
 
 class Actor():
-    def __init__(self, handle) -> None:
-        self.handle = handle
+    def __init__(self) -> None:
         self.agent_keymap = AGENT_KEYMAP
         self.env_keymap = ENV_KEYMAP
 
