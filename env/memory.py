@@ -1,11 +1,12 @@
 import logging
 import time
+from functools import partial
 from typing import Tuple
 
 import pymem
 from pymem import Pymem
 
-from .env_config import GAME_NAME, MAX_EP, MAX_HP
+from .env_config import GAME_NAME, MAX_EP, MAX_HP, REVIVE_DELAY
 
 
 class Memory():
@@ -77,6 +78,8 @@ class Memory():
         self.pm.write_bytes(self.health_read_addr + 5,
                             modified_code, len(modified_code))
 
+        self.agent_mem_ptr = partial(
+            self.pm.read_ulonglong, self.agent_mem_ptr)
         time.sleep(0.5)
 
     def __del__(self):
@@ -97,11 +100,22 @@ class Memory():
                 agent hp    [0, 1]
                 agent ep    [0, 1]
         """
-        agent_mem_addr = self.pm.read_ulonglong(self.agent_mem_ptr)
-        agent_hp = self.pm.read_int(agent_mem_addr + 0x130)
-        agent_ep = self.pm.read_int(agent_mem_addr + 0x148)
-        return (agent_hp / MAX_HP, agent_ep / MAX_EP)
+        try:
+            agent_mem_addr = self.agent_mem_ptr()
+            agent_hp = self.pm.read_int(agent_mem_addr + 0x130)
+            agent_ep = self.pm.read_int(agent_mem_addr + 0x148)
+            return (agent_hp / MAX_HP, agent_ep / MAX_EP)
+        except Exception as e:
+            logging.critical(e)
+            self.restoreMemory()
+            raise RuntimeError()
 
     def reviveAgent(self) -> None:
-        agent_mem_addr = self.pm.read_ulonglong(self.agent_mem_ptr)
-        self.pm.write_int(agent_mem_addr + 0x130, MAX_HP)
+        try:
+            agent_mem_addr = self.agent_mem_ptr()
+            self.pm.write_int(agent_mem_addr + 0x130, MAX_HP)
+            time.sleep(REVIVE_DELAY)
+        except Exception as e:
+            logging.critical(e)
+            self.restoreMemory()
+            raise RuntimeError()
