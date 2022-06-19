@@ -109,6 +109,21 @@ class Memory():
             self.restoreMemory()
             raise RuntimeError()
 
+    def transportAgent(self, loc: Tuple[float, float, float]):
+        try:
+            def nextPtr(x):
+                return self.pm.read_ulonglong(x)
+            coord_mem_addr = self.agent_mem_ptr() + 0x8
+            offsets = [0x1ff8, 0x68, 0x80]
+            for offset in offsets:
+                coord_mem_addr = nextPtr(coord_mem_addr) + offset
+            for i in range(len(loc)):
+                self.pm.write_float(coord_mem_addr + 0x4 * i, loc[i])
+        except Exception as e:
+            logging.critical(e)
+            self.restoreMemory()
+            raise RuntimeError()
+
     def getStatus(self) -> Tuple[float, float]:
         """[summary]
 
