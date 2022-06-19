@@ -11,6 +11,7 @@ from .env_config import GAME_NAME, MAX_EP, MAX_HP, REVIVE_DELAY
 
 class Memory():
     def __init__(self) -> None:
+        # HACK: Sekiro v1.06
         # NOTE: credit to https://fearlessrevolution.com/viewtopic.php?t=8938
         self.pm = Pymem(f"{GAME_NAME}.exe")
 
@@ -80,6 +81,10 @@ class Memory():
 
         self.agent_mem_ptr = partial(
             self.pm.read_ulonglong, self.agent_mem_ptr)
+        # NOTE: automatic boss lock
+        # sekiro.exe + 0x3d78058
+        self.state_mem_ptr = partial(
+            self.pm.read_ulonglong, module_game.lpBaseOfDll + 0x3d78058)
         time.sleep(0.5)
 
     def __del__(self):
@@ -91,6 +96,18 @@ class Memory():
                             self.original_code, len(self.original_code))
         self.pm.write_bytes(self.health_read_addr + 0xb8,
                             b"\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc", 10)
+
+    def lockBoss(self) -> bool:
+        try:
+            state_mem_addr = self.state_mem_ptr()
+            self.pm.write_bool(state_mem_addr + 0x2831, True)
+            time.sleep(0.01)
+            lock_state = self.pm.read_bool(state_mem_addr + 0x2831)
+            return lock_state
+        except Exception as e:
+            logging.critical(e)
+            self.restoreMemory()
+            raise RuntimeError()
 
     def getStatus(self) -> Tuple[float, float]:
         """[summary]
