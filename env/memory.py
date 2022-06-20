@@ -21,15 +21,17 @@ class Memory():
         ** ** ** ** 66 ** ** **
         0F ** ** F3 ** ** ** 0F
         """
-        bytes_pattern = b"\xe8....\x48\x8b\xcb\x66...\x0f..\xe8" \
-                        b"....\x66...\x0f..\xf3...\x0f"
+        # bytes_pattern = b"\xe8....\x48\x8b\xcb\x66...\x0f..\xe8" \
+        #                 b"....\x66...\x0f..\xf3...\x0f"
         module_game = pymem.process.module_from_name(
             self.pm.process_handle, f"{GAME_NAME}.exe")
-        self.health_read_addr = pymem.pattern.pattern_scan_module(
-            self.pm.process_handle, module_game, bytes_pattern)
-        if self.health_read_addr is None:
-            logging.critical("memory scan failed")
-            raise RuntimeError()
+        # HACK: sekiro.exe + 0x66888b
+        self.health_read_addr = module_game.lpBaseOfDll + 0x66888b
+        # self.health_read_addr = pymem.pattern.pattern_scan_module(
+        #     self.pm.process_handle, module_game, bytes_pattern)
+        # if self.health_read_addr is None:
+        #     logging.critical("memory scan failed")
+        #     raise RuntimeError()
         self.original_code = self.pm.read_bytes(self.health_read_addr + 5, 7)
 
         """[code injection]
@@ -82,7 +84,7 @@ class Memory():
         self.agent_mem_ptr = partial(
             self.pm.read_ulonglong, self.agent_mem_ptr)
         # NOTE: automatic boss lock
-        # sekiro.exe + 0x3d78058
+        # HACK: sekiro.exe + 0x3d78058
         self.state_mem_ptr = partial(
             self.pm.read_ulonglong, module_game.lpBaseOfDll + 0x3d78058)
         time.sleep(0.5)
