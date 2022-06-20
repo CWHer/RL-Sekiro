@@ -1,15 +1,14 @@
 import logging
 import time
 
-import pydirectinput
 from utils import timeLog
 
-from .env_config import AGENT_KEYMAP, ENV_KEYMAP
+from .env_config import AGENT_KEYMAP, ENV_KEYMAP, PRESS_RELEASE_DELAY
+from .keyboard import PressKey, ReleaseKey
 
 
 class Actor():
-    def __init__(self, handle) -> None:
-        self.handle = handle
+    def __init__(self) -> None:
         self.agent_keymap = AGENT_KEYMAP
         self.env_keymap = ENV_KEYMAP
 
@@ -20,7 +19,10 @@ class Actor():
             logging.critical("invalid agent action")
             raise RuntimeError()
 
-        pydirectinput.press(self.agent_keymap[key])
+        key_code = self.agent_keymap[key]
+        PressKey(key_code)
+        time.sleep(PRESS_RELEASE_DELAY)
+        ReleaseKey(key_code)
         logging.info(f"action: {key}")
 
         time.sleep(action_delay)
@@ -32,7 +34,10 @@ class Actor():
             logging.critical("invalid env action")
             raise RuntimeError()
 
-        pydirectinput.press(self.env_keymap[key])
+        key_code = self.env_keymap[key]
+        PressKey(key_code)
+        time.sleep(PRESS_RELEASE_DELAY)
+        ReleaseKey(key_code)
         logging.debug(f"env: {key}")
 
         time.sleep(action_delay)

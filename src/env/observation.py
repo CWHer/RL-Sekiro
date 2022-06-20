@@ -10,9 +10,9 @@ from icecream import ic
 from PIL import Image, ImageGrab
 from utils import timeLog
 
-from .env_config import (AGENT_EP_ANCHOR, AGENT_HP_ANCHOR, BOSS_EP_ANCHOR,
-                         BOSS_HP_ANCHOR, FOCUS_ANCHOR, FOCUS_SIZE,
+from .env_config import (BOSS_HP_ANCHOR, FOCUS_ANCHOR, FOCUS_SIZE,
                          SCREEN_ANCHOR, SCREEN_SIZE)
+from .memory import Memory
 
 
 class Observer():
@@ -20,8 +20,9 @@ class Observer():
     yield raw observation
     """
 
-    def __init__(self, handle) -> None:
-        self.handle: int = handle
+    def __init__(self, handle: int, memory: Memory) -> None:
+        self.handle = handle
+        self.memory = memory
 
         anchor = ctypes.wintypes.RECT()
         ctypes.windll.user32.SetProcessDPIAware(2)
@@ -35,15 +36,9 @@ class Observer():
 
         self.timestamp: str = ""
 
-        # HACK: load preset hp & ep
-        self.agent_hp_full = pickle.load(
-            open("./env/asset/agent-hp-full.pkl", "rb"))
+        # HACK: load preset hp
         self.boss_hp_full = pickle.load(
             open("./env/asset/boss-hp-full.pkl", "rb"))
-        self.agent_ep_full = pickle.load(
-            open("./env/asset/agent-ep-full.pkl", "rb"))
-        self.boss_ep_full = pickle.load(
-            open("./env/asset/boss-ep-full.pkl", "rb"))
 
     def __select(self, arr: npt.NDArray, anchor: Tuple) -> npt.NDArray:
         # NOTE: C x H x W
@@ -63,7 +58,7 @@ class Observer():
                 screen_shot.transpose(1, 2, 0).astype(np.uint8)).save(
                 f"./debug/screen-shot-{self.timestamp}.png")
 
-        if screen_shot.shape[1:] != SCREEN_SIZE:
+        if screen_shot.shape[-2:] != SCREEN_SIZE:
             logging.critical("incorrect screenshot")
             raise RuntimeError()
 
@@ -96,41 +91,33 @@ class Observer():
             fig.subplots_adjust(hspace=-0.8)
             plt.savefig(f"./debug/{prefix}-content-{self.timestamp}.png")
             plt.close()
-        result = np.sum(result, axis=0) > result.shape[0] / 2
 
-        return 100 * np.sum(result) / result.size
+        result = np.sum(result, axis=0) > result.shape[0] / 2
+        return np.sum(result) / result.size
 
     @timeLog
     def state(self, screen_shot: npt.NDArray[np.int16]) -> \
-            Tuple[npt.NDArray[np.uint8], float, float, float, float]:
+            Tuple[npt.NDArray[np.uint8], float, float, float]:
         """[summary]
 
         State:
             image           npt.NDArray[np.uint8]
-            agent_hp        float
-            boss_hp         float
-            agent_ep        float
-            boss_ep         float
+            agent_hp        float, [0, 1]
+            agent_ep        float, [0, 1]
+            boss_hp         float, [0, 1]
         """
+        agent_hp, agent_ep = self.memory.getStatus()
+
         # NOTE: use HSV
         hsv_screen_shot = np.array(Image.fromarray(
             screen_shot.astype(np.uint8).transpose(1, 2, 0)).convert("HSV"),
             dtype=np.int16).transpose(2, 0, 1)
-        agent_hp = self.__calcProperty(
-            arr=self.__select(hsv_screen_shot, AGENT_HP_ANCHOR),
-            target=self.agent_hp_full, threshold=0.25, prefix="agent-hp")
         boss_hp = self.__calcProperty(
             arr=self.__select(hsv_screen_shot, BOSS_HP_ANCHOR),
-            target=self.boss_hp_full, threshold=0.25, prefix="boss-hp")
-        logging.info(f"agent hp: {agent_hp:.1f}, boss hp: {boss_hp:.1f}")
-
-        agent_ep = self.__calcProperty(
-            self.__select(hsv_screen_shot, AGENT_EP_ANCHOR),
-            target=self.agent_ep_full, threshold=0.45, prefix="agent-ep")
-        boss_ep = self.__calcProperty(
-            self.__select(hsv_screen_shot, BOSS_EP_ANCHOR),
-            target=self.boss_ep_full, threshold=0.45, prefix="boss-ep")
-        logging.info(f"agent ep: {agent_ep:.1f}, boss ep: {boss_ep:.1f}")
+            target=self.boss_hp_full, threshold=0.4, prefix="boss-hp")
+        logging.info(f"agent hp: {agent_hp:.4f}, "
+                     f"agent ep: {agent_ep:.4f}, "
+                     f"boss hp: {boss_hp:.4f}")
 
         focus_area = Image.fromarray(self.__select(
             screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8)).convert("L")
@@ -139,4 +126,4 @@ class Observer():
         focus_area = np.array(
             focus_area.resize(FOCUS_SIZE), dtype=np.uint8)
 
-        return focus_area, agent_hp, boss_hp, agent_ep, boss_ep
+        return focus_area, agent_hp, agent_ep, boss_hp
