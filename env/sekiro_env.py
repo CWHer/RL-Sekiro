@@ -9,7 +9,10 @@ import win32gui
 from utils import timeLog
 
 from .actions import Actor
-from .env_config import AGENT_KEYMAP, GAME_NAME, REVIVE_DELAY
+from .env_config import (ACTION_DELAY, AGENT_DEAD_DELAY, AGENT_KEYMAP,
+                         BOSS_DEAD_DELAY, GAME_NAME, MAP_CENTER, PAUSE_DELAY,
+                         STEP_DELAY)
+from .memory import Memory
 from .observation import Observer
 
 
@@ -20,50 +23,43 @@ class SekiroEnv():
             logging.critical(f"can't find {GAME_NAME}")
             raise RuntimeError()
 
-        self.actor = Actor(self.handle)
-        self.observer = Observer(self.handle)
+        self.actor = Actor()
+        self.memory = Memory()
+        self.observer = Observer(self.handle, self.memory)
 
         self.last_agent_hp = 0
         self.last_agent_ep = 0
         self.last_boss_hp = 0
-        self.last_boss_ep = 0
 
     def actionSpace(self) -> List[int]:
         return list(range(len(AGENT_KEYMAP)))
 
-    def __stepReward(self, state: Tuple) -> float:
-        agent_hp, boss_hp, agent_ep, boss_ep = state[1:]
+    def __stepReward(self, agent_hp, agent_ep, boss_hp) -> float:
         # TODO: refine reward
         rewards = np.array(
             [agent_hp - self.last_agent_hp,
-             self.last_boss_hp - boss_hp,
-             min(0, self.last_agent_ep - agent_ep),
-             max(0, boss_ep - self.last_boss_ep)])
-        weights = np.array([0.5, 0.4, 0.1, 0.1])
+             min(0, agent_ep - self.last_agent_ep),
+             self.last_boss_hp - boss_hp])
+        weights = np.array([2, 1, 5])
         reward = weights.dot(rewards).item()
 
-        reward = -100 if agent_hp < 0.1 else reward
-
-        self.last_agent_hp = agent_hp
-        self.last_agent_ep = agent_ep
-        self.last_boss_hp = boss_hp
-        self.last_boss_ep = boss_ep
+        reward = -20 if agent_hp == 0 else reward
+        reward = 50 if boss_hp == 0 else reward
 
         logging.info(f"reward: {reward:<.2f}")
         return reward
 
     @timeLog
     def step(self, action: int) -> Tuple[Tuple[npt.NDArray[np.uint8],
-                                               float, float, float, float],
+                                               float, float, float],
                                          float, bool, None]:
         """[summary]
 
         State:
             focus_area      npt.NDArray[np.uint8], "L"
-            agent_hp        float
-            boss_hp         float
-            agent_ep        float
-            boss_ep         float
+            agent_hp        float, [0, 1]
+            agent_ep        float, [0, 1]
+            boss_hp         float, [0, 1]
 
         Returns:
             state           Tuple
@@ -71,14 +67,25 @@ class SekiroEnv():
             done            bool
             info            None
         """
+        lock_state = self.memory.lockBoss()
+        logging.info(f"lock state: {lock_state}")
+
         action_key = list(AGENT_KEYMAP.keys())[action]
-        self.actor.agentAction(action_key)
+        self.actor.agentAction(action_key, action_delay=STEP_DELAY)
 
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
 
+        agent_hp, agent_ep, boss_hp = state[-3:]
+        reward = self.__stepReward(agent_hp, agent_ep, boss_hp)
+
+        # update last status
+        self.last_agent_hp = agent_hp
+        self.last_agent_ep = agent_ep
+        self.last_boss_hp = boss_hp
+
         # NOTE: agent dead
-        done = state[1] < 0.1
+        done = agent_hp == 0
         if done:
             time.sleep(10)
             self.actor.envAction("focus", action_delay=REVIVE_DELAY)
@@ -89,10 +96,9 @@ class SekiroEnv():
         if state[2] < 0.1:
             raise NotImplementedError()
 
-        return state, self.__stepReward(state), done, None
+        return state, reward, done, None
 
-    def reset(self) -> Tuple[npt.NDArray[np.uint8],
-                             float, float, float, float]:
+    def reset(self) -> Tuple[npt.NDArray[np.uint8], float, float, float]:
         # restore window
         win32gui.SendMessage(self.handle, win32con.WM_SYSCOMMAND,
                              win32con.SC_RESTORE, 0)
@@ -100,11 +106,12 @@ class SekiroEnv():
         win32gui.SetForegroundWindow(self.handle)
         time.sleep(0.5)
 
-        self.actor.envAction("resume", action_delay=True)
+        self.memory.transportAgent(MAP_CENTER)
+        self.memory.lockBoss()
+        self.actor.envAction("resume", action_delay=PAUSE_DELAY)
 
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
-        self.last_agent_hp, self.last_boss_hp, \
-            self.last_agent_ep, self.last_boss_ep = state[1:]
+        self.last_agent_hp, self.last_agent_ep, self.last_boss_hp = state[-3:]
 
         return state
