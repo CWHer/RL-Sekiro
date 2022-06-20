@@ -34,5 +34,4 @@ if __name__ == "__main__":
     actor.agentAction("dodge", action_delay=ACTION_DELAY)
     actor.agentAction("jump", action_delay=ACTION_DELAY)
 
-    actor.envAction("revive", action_delay=REVIVE_DELAY)
     actor.envAction("pause")
