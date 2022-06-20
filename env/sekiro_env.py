@@ -9,9 +9,8 @@ import win32gui
 from utils import timeLog
 
 from .actions import Actor
-from .env_config import (ACTION_DELAY, AGENT_DEAD_DELAY, AGENT_KEYMAP,
-                         BOSS_DEAD_DELAY, GAME_NAME, MAP_CENTER, PAUSE_DELAY,
-                         STEP_DELAY)
+from .env_config import (AGENT_DEAD_DELAY, AGENT_KEYMAP, GAME_NAME, MAP_CENTER,
+                         PAUSE_DELAY, ROTATION_DELAY, STEP_DELAY)
 from .memory import Memory
 from .observation import Observer
 
@@ -40,11 +39,12 @@ class SekiroEnv():
             [agent_hp - self.last_agent_hp,
              min(0, agent_ep - self.last_agent_ep),
              self.last_boss_hp - boss_hp])
-        weights = np.array([2, 1, 5])
+        weights = np.array(
+            [10, 5, 40 + 40 * (1 - self.last_boss_hp)])
         reward = weights.dot(rewards).item()
 
         reward = -20 if agent_hp == 0 else reward
-        reward = 50 if boss_hp == 0 else reward
+        reward = 50 if boss_hp - 0.5 > self.last_boss_hp else reward
 
         logging.info(f"reward: {reward:<.2f}")
         return reward
@@ -84,25 +84,15 @@ class SekiroEnv():
         self.last_agent_ep = agent_ep
         self.last_boss_hp = boss_hp
 
-        # NOTE: agent dead
+        # NOTE: death of boss only influence "reward" not "done"
+        # NOTE: agent is dead
         done = agent_hp == 0
         if done:
             time.sleep(AGENT_DEAD_DELAY)
             self.memory.lockBoss()
             # HACK: view angle rotation time
-            time.sleep(1)
+            time.sleep(ROTATION_DELAY)
             self.memory.reviveAgent()
-            self.actor.envAction("pause")
-            time.sleep(2)
-
-        # NOTE: boss dead
-        if not done and boss_hp == 0:
-            # TODO: not completely tested
-            done = True
-            for _ in range(10):
-                self.actor.agentAction(
-                    "attack", action_delay=ACTION_DELAY)
-            time.sleep(BOSS_DEAD_DELAY)
             self.actor.envAction("pause")
             time.sleep(2)
 
