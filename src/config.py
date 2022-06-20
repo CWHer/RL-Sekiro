@@ -10,7 +10,7 @@ AGENT_CONFIG = {
     # "n_periods": 4,
 
     # AGENT architecture
-    "in_channels": 5,
+    "in_channels": 4,
     "n_res": 5,
     "n_channels": 64,
 
@@ -22,7 +22,7 @@ AGENT_CONFIG = {
     "tau": 0.1,
 
     # epsilon-greedy
-    "init_epsilon": 0.5,
+    "init_epsilon": 0.6,
     "min_epsilon": 0.1,
     "delta_epsilon": 0.01
 }
@@ -30,11 +30,11 @@ AGENT_CONFIG = {
 DATA_CONFIG = {
     "dataset_dir": "dataset",
     "save_freq": 200,
-    "replay_size": 20000,
+    "replay_size": 100000,
 
     # sample
-    "train_thr": 50,
-    "batch_size": 32,
+    "train_thr": 80,
+    "batch_size": 64,
 }
 
 TRAIN_CONFIG = {
@@ -42,17 +42,17 @@ TRAIN_CONFIG = {
     "log_dir": "logs/",
 
     # total
-    "epochs": 500,
+    "epochs": 1000,
 
     # explore the environment
-    "n_game": 1,
+    "n_game": 2,
 
     # update the model
-    "train_epochs": 2,
+    "train_epochs": 4,
 
     # evaluate
-    # NOTE: current_reward >= best_reward * update_thr
-    "update_thr": 1.02,
+    # NOTE: current_reward >= best_reward + update_thr
+    "update_thr": 2,
 }
 
 

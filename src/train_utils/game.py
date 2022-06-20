@@ -3,10 +3,9 @@ from typing import List, Tuple
 
 import numpy as np
 import torch
-from env import SekiroEnv
 
 
-def playGame(agent, seed: int) -> Tuple[List, float]:
+def playGame(env, agent, seed: int) -> Tuple[List, float]:
     """[summary]
 
     Returns:
@@ -18,7 +17,6 @@ def playGame(agent, seed: int) -> Tuple[List, float]:
     random.seed(seed)
 
     data_buffer = []
-    env = SekiroEnv()
     state = env.reset()
     total_reward, done = 0, False
 

@@ -15,10 +15,9 @@ class Encoder():
 
         State:
             focus_area      npt.NDArray[np.uint8]
-            agent_hp        float
-            boss_hp         float
-            agent_ep        float
-            boss_ep         float
+            agent_hp        float, [0, 1]
+            agent_ep        float, [0, 1]
+            boss_hp         float, [0, 1]
         """
         focus_area = state[0].astype(np.float32) / 255
         attributes = map(lambda x: np.full(

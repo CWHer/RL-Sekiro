@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from agent.d3qn import D3QN
 from config import DATA_CONFIG, TRAIN_CONFIG
+from env import SekiroEnv
 from train_utils import ReplayBuffer, playGame
 from utils import timeLog
 
@@ -21,6 +22,7 @@ class Trainer():
         self.n_best = 0
         self.best_reward = 1e-5
 
+        self.env = SekiroEnv()
         self.seed = partial(
             random.randint, a=0, b=20000905)
         self.writer = SummaryWriter(TRAIN_CONFIG.log_dir)
@@ -33,7 +35,7 @@ class Trainer():
         n_game = TRAIN_CONFIG.n_game
         for _ in tqdm(range(n_game)):
             episode_data, reward = \
-                playGame(self.agent, self.seed())
+                playGame(self.env, self.agent, self.seed())
             self.replay_buffer.add(episode_data)
             mean_reward += reward
         mean_reward /= n_game
@@ -78,7 +80,7 @@ class Trainer():
                 self.__train(epoch=i)
 
             # >>>>> update model
-            if reward / self.best_reward \
+            if reward - self.best_reward \
                     > TRAIN_CONFIG.update_thr:
                 self.n_best += 1
                 self.agent.save(self.n_best)
