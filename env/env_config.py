@@ -2,14 +2,14 @@ GAME_NAME = "Sekiro"
 
 # ------> action
 # HACK: change accordingly
-PRESS_RELEASE_DELAY = 0.01
+PRESS_RELEASE_DELAY = 0.02
 
 STEP_DELAY = 0.15
 ACTION_DELAY = 0.25
 
 AGENT_DEAD_DELAY = 10
-BOSS_DEAD_DELAY = 5
-REVIVE_DELAY = 2
+BOSS_DEAD_DELAY = 2.5
+REVIVE_DELAY = 2.1
 PAUSE_DELAY = 0.8
 
 # NOTE: directX scan codes https://www.google.com/search?q=directInputKeyboardScanCodes

@@ -87,14 +87,24 @@ class SekiroEnv():
         # NOTE: agent dead
         done = agent_hp == 0
         if done:
-            time.sleep(10)
-            self.actor.envAction("focus", action_delay=REVIVE_DELAY)
-            self.actor.envAction("revive", action_delay=1.5 * REVIVE_DELAY)
-            self.actor.envAction("pause", action_delay=2 * REVIVE_DELAY)
+            time.sleep(AGENT_DEAD_DELAY)
+            self.memory.lockBoss()
+            # HACK: view angle rotation time
+            time.sleep(1)
+            self.memory.reviveAgent()
+            self.actor.envAction("pause")
+            time.sleep(2)
 
         # NOTE: boss dead
-        if state[2] < 0.1:
-            raise NotImplementedError()
+        if not done and boss_hp == 0:
+            # TODO: not completely tested
+            done = True
+            for _ in range(10):
+                self.actor.agentAction(
+                    "attack", action_delay=ACTION_DELAY)
+            time.sleep(BOSS_DEAD_DELAY)
+            self.actor.envAction("pause")
+            time.sleep(2)
 
         return state, reward, done, None
 
