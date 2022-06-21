@@ -6,7 +6,85 @@ from typing import Tuple
 import pymem
 from pymem import Pymem
 
-from .env_config import GAME_NAME, MAX_EP, MAX_HP, REVIVE_DELAY
+from .env_config import (GAME_NAME, MAX_EP, MAX_HP, MIN_CODE_LEN,
+                         MIN_HELPER_LEN, REVIVE_DELAY)
+
+
+class CodeInjection():
+    def __init__(self, pm: Pymem,
+                 original_addr: int, original_code_len: int,
+                 helper_addr: int, helper_code_len: int,
+                 code_addr: int, injected_code: bytes) -> None:
+
+        self.pm = pm
+
+        self.original_addr = original_addr
+        self.original_code = self.pm.read_bytes(original_addr,
+                                                original_code_len)
+
+        self.helper_addr = helper_addr
+        self.helper_code = self.pm.read_bytes(helper_addr,
+                                              helper_code_len)
+
+        if original_code_len < MIN_CODE_LEN \
+                or helper_code_len < MIN_HELPER_LEN:
+            logging.critical("insufficient code region")
+            raise RuntimeError()
+
+        """[helper code]
+        NOTE: available bytes >= MIN_HELPER_LEN, 
+            better choose "0xcc 0xcc 0xcc ...." region
+        
+        helper_addr:
+            push    rbx
+            mov     rbx, code_addr
+            jump    rbx
+            nop
+            ...
+        """
+        modified_code = b"\x53" + \
+            b"\x48\xbb" + code_addr.to_bytes(8, "little") + \
+            b"\xff\xe3" + b"\x90" * (helper_code_len - MIN_HELPER_LEN)
+        self.pm.write_bytes(helper_addr, modified_code, helper_code_len)
+
+        """[injected code]
+        code_addr:
+            pop     rbx
+            [injected_code]
+            [original_code]
+            push    rbx
+            mov     rbx, original_addr + original_code_len
+            jmp     rbx
+        """
+        injected_code = b"\x5b" + \
+            injected_code + self.original_code + b"\x53" + \
+            b"\x48\xbb" + (original_addr + 5).to_bytes(8, "little") + \
+            b"\xff\xe3"
+        self.pm.write_bytes(code_addr, injected_code, len(injected_code))
+
+        """[modified original code]
+        NOTE: available bytes >= MIN_CODE_LEN
+        
+        original_addr:
+            jmp     helper_addr
+            pop     rbx
+            nop
+            ...
+        """
+        modified_code = \
+            b"\xe9" + (helper_addr -
+                       original_addr - 5).to_bytes(4, "little", signed=True) + \
+            b"\x5b" + b"\x90" * (original_code_len - MIN_CODE_LEN)
+        self.pm.write_bytes(original_addr, modified_code, original_code_len)
+
+    def __del__(self):
+        self.restoreMemory()
+
+    def restoreMemory(self):
+        self.pm.write_bytes(self.original_addr,
+                            self.original_code, len(self.original_code))
+        self.pm.write_bytes(self.helper_addr,
+                            self.helper_code, len(self.helper_code))
 
 
 class Memory():
@@ -14,49 +92,40 @@ class Memory():
         # HACK: Sekiro v1.06
         # NOTE: credit to https://fearlessrevolution.com/viewtopic.php?t=8938
         self.pm = Pymem(f"{GAME_NAME}.exe")
+        module_game = pymem.process.module_from_name(
+            self.pm.process_handle, f"{GAME_NAME}.exe")
 
-        """[memory scan]
+        # NOTE: agent attributes
+        """
         E8 ** ** ** ** 48 8B CB
         66 ** ** ** 0F ** ** E8
         ** ** ** ** 66 ** ** **
         0F ** ** F3 ** ** ** 0F
         """
-        # bytes_pattern = b"\xe8....\x48\x8b\xcb\x66...\x0f..\xe8" \
-        #                 b"....\x66...\x0f..\xf3...\x0f"
-        module_game = pymem.process.module_from_name(
-            self.pm.process_handle, f"{GAME_NAME}.exe")
+        bytes_pattern = b"\xe8....\x48\x8b\xcb\x66...\x0f..\xe8" \
+                        b"....\x66...\x0f..\xf3...\x0f"
         # HACK: sekiro.exe + 0x66888b
-        self.health_read_addr = module_game.lpBaseOfDll + 0x66888b
-        # self.health_read_addr = pymem.pattern.pattern_scan_module(
-        #     self.pm.process_handle, module_game, bytes_pattern)
-        # if self.health_read_addr is None:
-        #     logging.critical("memory scan failed")
-        #     raise RuntimeError()
-        self.original_code = self.pm.read_bytes(self.health_read_addr + 5, 7)
-
+        # self.health_read_addr = module_game.lpBaseOfDll + 0x66888b
+        health_read_addr = pymem.pattern.pattern_scan_module(
+            self.pm.process_handle, module_game, bytes_pattern)
+        if health_read_addr is None:
+            logging.critical("health_read_addr scan failed")
+            raise RuntimeError()
         """[code injection]
-        address: code_addr
+        push    rbx
         mov     rbx, agent_mem_addr
         mov     [rbx], rcx
         pop     rbx
-        ----> original code
-        mov     rcx, rbx
-        movd    xmm6, eax
-        <---- original code
-        mov     rbx, health_read_addr + 0xc
-        jmp     rbx
-        ----------
-        agent_mem_addr  (code_addr + 0x21)
-        dq      0
         """
-        self.code_addr = self.pm.allocate(2048)
-        self.agent_mem_ptr = self.code_addr + 0x21
-        injected_code = \
+        code_addr = self.pm.allocate(256)
+        self.agent_mem_ptr = self.pm.allocate(8)  # 8 bytes
+        injected_code = b"\x53" + \
             b"\x48\xbb" + self.agent_mem_ptr.to_bytes(8, "little") + \
-            b"\x48\x89\x0b" + b"\x5b" + self.original_code + \
-            b"\x48\xbb" + (self.health_read_addr + 0x1b).to_bytes(8, "little") + \
-            b"\xff\xe3"
-        self.pm.write_bytes(self.code_addr, injected_code, len(injected_code))
+            b"\x48\x89\x0b" + b"\x5b"
+        self.health_code_injection = CodeInjection(
+            self.pm, original_addr=health_read_addr + 5, original_code_len=7,
+            helper_addr=health_read_addr + 0xd46, helper_code_len=13,
+            code_addr=code_addr, injected_code=injected_code)
 
         """[code injection]
         address: health_read_addr + 0xb8
@@ -83,6 +152,7 @@ class Memory():
 
         self.agent_mem_ptr = partial(
             self.pm.read_ulonglong, self.agent_mem_ptr)
+
         # NOTE: automatic boss lock
         # HACK: sekiro.exe + 0x3d78058
         self.state_mem_ptr = partial(
