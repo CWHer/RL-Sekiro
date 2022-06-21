@@ -17,9 +17,9 @@ if __name__ == "__main__":
         logging.critical(f"can't find {GAME_NAME}")
         raise RuntimeError()
 
-    observer = Observer(handle)
+    observer = Observer(handle, None)
     observer.shotScreen()
 
     screen_shot = Image.open("./debug/screen-shot.png")
-    screen_shot = np.array(screen_shot, dtype=np.uint8).transpose(2, 0, 1)
+    screen_shot = np.array(screen_shot, dtype=np.int16).transpose(2, 0, 1)
     observer.state(screen_shot)
