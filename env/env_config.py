@@ -32,8 +32,11 @@ MIN_HELPER_LEN = 13
 # <------
 
 # ------> agent attributes
-MAX_HP = 800
-MAX_EP = 300
+MAX_AGENT_HP = 800
+MAX_AGENT_EP = 300
+
+MAX_BOSS_HP = 9887
+MAX_AGENT_EP = 4083
 
 MAP_CENTER = (-110.252, 54.077, 239.538)
 # <------
@@ -46,5 +49,5 @@ SCREEN_ANCHOR = (1, -721, -1, -1)
 FOCUS_ANCHOR = (392, 108, 892, 608)
 FOCUS_SIZE = (128, 128)
 
-BOSS_HP_ANCHOR = (75, 62, 348, 71)
+# BOSS_HP_ANCHOR = (75, 62, 348, 71)
 # <------
