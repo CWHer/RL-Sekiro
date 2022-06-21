@@ -127,28 +127,45 @@ class Memory():
             helper_addr=health_read_addr + 0xd46, helper_code_len=13,
             code_addr=code_addr, injected_code=injected_code)
 
+        # NOTE: gesture damage
+        """
+        45 ** ** 89 ** ** ** 00 00 85 DB
+        """
+        bytes_pattern = b"\x45..\x89...\x00\x00\x85\xdb"
+        guard_write_addr = pymem.pattern.pattern_scan_module(
+            self.pm.process_handle, module_game, bytes_pattern)
+        if guard_write_addr is None:
+            logging.critical("guard_write_addr scan failed")
+            raise RuntimeError()
         """[code injection]
-        address: health_read_addr + 0xb8
-        mov     rbx, code_addr
-        jump    rbx
-        """
-        injected_code = \
-            b"\x48\xbb" + self.code_addr.to_bytes(8, "little") + \
-            b"\xff\xe3"
-        self.pm.write_bytes(self.health_read_addr + 0xb8,
-                            injected_code, len(injected_code))
-
-        """[change original code]
-        address: health_read_addr + 5
         push    rbx
-        jmp     health_read_addr + 0xb8
-        nop
+        push    rcx
+        mov     rcx, critical_hit_mem_addr
+        mov     cx, [rcx]
+        mov     rbx, agent_mem_addr
+        cmp     [rbx], rdi
+        je      done
+        cmp     cx, 00
+        je      done
+        xor     eax, eax
+
+        done:
+        pop     rcx
+        pop     rbx
         """
-        modified_code = b"\x53" + \
-            b"\xe9" + (0xb8 - 0x6 - 5).to_bytes(4, "little") + \
-            b"\x90"
-        self.pm.write_bytes(self.health_read_addr + 5,
-                            modified_code, len(modified_code))
+        code_addr = self.pm.allocate(256)
+        self.critical_hit_mem_addr = self.pm.allocate(2)  # 2 bytes
+        injected_code = b"\x53" + b"\x51" + \
+            b"\x48\xb9" + self.critical_hit_mem_addr.to_bytes(8, "little") + \
+            b"\x66\x8b\x09" + \
+            b"\x48\xbb" + self.agent_mem_ptr.to_bytes(8, "little") + \
+            b"\x48\x39\x3b" + b"\x0f\x84\x0c\x00\x00\x00" + \
+            b"\x66\x83\xf9\x00" + b"\x0f\x84\x02\x00\x00\x00" + \
+            b"\x31\xc0" + b"\x59" + b"\x5b"
+        self.guard_code_injection = CodeInjection(
+            self.pm, original_addr=guard_write_addr + 3, original_code_len=6,
+            helper_addr=guard_write_addr + 0x33b, helper_code_len=13,
+            code_addr=code_addr, injected_code=injected_code)
 
         self.agent_mem_ptr = partial(
             self.pm.read_ulonglong, self.agent_mem_ptr)
@@ -159,15 +176,18 @@ class Memory():
             self.pm.read_ulonglong, module_game.lpBaseOfDll + 0x3d78058)
         time.sleep(0.5)
 
-    def __del__(self):
-        self.restoreMemory()
-
     def restoreMemory(self) -> None:
-        self.pm.free(self.code_addr)
-        self.pm.write_bytes(self.health_read_addr + 5,
-                            self.original_code, len(self.original_code))
-        self.pm.write_bytes(self.health_read_addr + 0xb8,
-                            b"\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc", 10)
+        self.health_code_injection.restoreMemory()
+        self.guard_code_injection.restoreMemory()
+
+    def setCritical(self, state: bool) -> None:
+        try:
+            self.pm.write_short(
+                self.critical_hit_mem_addr, int(state))
+        except Exception as e:
+            logging.critical(e)
+            self.restoreMemory()
+            raise RuntimeError()
 
     def lockBoss(self) -> bool:
         try:

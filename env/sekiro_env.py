@@ -67,6 +67,8 @@ class SekiroEnv():
             done            bool
             info            None
         """
+        self.memory.setCritical(False)
+
         lock_state = self.memory.lockBoss()
         logging.info(f"lock state: {lock_state}")
 
@@ -85,6 +87,9 @@ class SekiroEnv():
         self.last_boss_hp = boss_hp
 
         # NOTE: death of boss only influence "reward" not "done"
+        if boss_hp < 0.005:
+            self.memory.setCritical(True)
+
         # NOTE: agent is dead
         done = agent_hp == 0
         if done:
