@@ -38,15 +38,11 @@ if __name__ == "__main__":
   
 2. 使用窗口化进行游戏，并修改分辨率为`1280x720`
 
-3. 安装自定义Mod，修改敌人的生命数为`0xff`（[下载地址](https://drive.google.com/file/d/1y9islX4yVQ0annRZCakzuuz32UMi1wVm/view?usp=sharing)）
-
-4. 选择关卡："再战稀世强者"，”苇名弦一郎“，等待关卡载入结束后，按”esc“进行暂停
+3. 选择关卡："再战稀世强者"，”苇名弦一郎“，等待关卡载入结束后，按”esc“进行暂停
 
 5. 开始运行环境，`state = env.reset() ...`
 
-   - :warning: 确保`step time > 0.25s`
-
-   - :warning: 可能需要根据自己的实际情况调整`env_config.py`中的`*_DELAY`参数
+   :warning: 可能需要根据自己的实际情况调整`env_config.py`中的`*_DELAY`参数
 
 
 
@@ -58,15 +54,13 @@ if __name__ == "__main__":
 
 - [x] 生命值/耐力值识别不准确，会有小波动，偶尔有大波动
 
-  直接从内存读取人物的生命值/耐力值，敌人的生命值仍使用模式匹配的方法
+  直接从内存读取人物的生命值/耐力值以及敌人的生命值
 
 - [x] 尚未处理成功击败敌人的情况
 
-  :warning: 在敌人生命值极低时，强制修改敌人的耐力值为0，简化彻底击败敌人的过程
+  :warning: 在敌人生命值极低时，直接复活敌人，并认为成功击败了敌人
   
-  使用自定义的Mod修改敌人的生命数为`0xff`（credit to [Wendi Chen](https://github.com/ChenWendi2001)）
-
-
+  
 
 
 ## Details
@@ -90,32 +84,18 @@ if __name__ == "__main__":
 
 - Observation
 
-  `shotScreen()`获取游戏窗口的截图，用传统的匹配方法来读取敌人的生命值
+  `shotScreen()`获取游戏窗口的截图
 
 - Memory
 
-  读取游戏内存，执行代码注入
+  读取游戏内存，执行代码注入，获取人物的生命值/耐力值以及敌人的生命值
 
   `restoreMemory()`撤销代码注入，在程序终止的时候必须被执行 :warning:
-
-- Detect HP
-
-  1. 使用`magic number`在截图中裁剪出生命值进度条
-
-  2. 预先存储满生命值的图片`target`，模式为HSV（`np.int16`避免溢出）
-
-  3. 对于当前生命值的图片`current`，进行如下操作
-
-     ```python
-     result: npt.NDArray[np.bool_] = np.max(
-         np.abs(target - current), axis=0) < (threshold * 256)
-     result = np.sum(result, axis=0) > result.shape[0] / 2
-     return np.sum(result) / result.size
-     ```
 
 - Reward
   
   `death of agent`：-20，`death of boss`：50
+  
   $$
   \begin{align}
   \text{reward} = & w_0 \times \left(\text{agent hp}-\text{last agent hp}\right) + \\
