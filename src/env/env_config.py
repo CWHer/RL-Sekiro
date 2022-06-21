@@ -9,7 +9,7 @@ ACTION_DELAY = 0.25
 
 AGENT_DEAD_DELAY = 10
 ROTATION_DELAY = 1
-REVIVE_DELAY = 2.1
+REVIVE_DELAY = 2.2
 PAUSE_DELAY = 0.8
 
 # NOTE: directX scan codes https://www.google.com/search?q=directInputKeyboardScanCodes
@@ -24,6 +24,11 @@ ENV_KEYMAP = {
     "pause": 0x01,
     "resume": 0x01,
 }
+# <------
+
+# ------> code injection
+MIN_CODE_LEN = 6
+MIN_HELPER_LEN = 13
 # <------
 
 # ------> agent attributes

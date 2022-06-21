@@ -30,13 +30,8 @@ class SekiroEnv():
         self.last_agent_ep = 0
         self.last_boss_hp = 0
 
-        self.init_boss_hp = 0
-
     def actionSpace(self) -> List[int]:
         return list(range(len(AGENT_KEYMAP)))
-
-    def getScore(self) -> float:
-        return self.init_boss_hp - self.last_boss_hp
 
     def __stepReward(self, agent_hp, agent_ep, boss_hp) -> float:
         # TODO: refine reward
@@ -72,6 +67,8 @@ class SekiroEnv():
             done            bool
             info            None
         """
+        self.memory.setCritical(False)
+
         lock_state = self.memory.lockBoss()
         logging.info(f"lock state: {lock_state}")
 
@@ -90,6 +87,9 @@ class SekiroEnv():
         self.last_boss_hp = boss_hp
 
         # NOTE: death of boss only influence "reward" not "done"
+        if boss_hp < 0.005:
+            self.memory.setCritical(True)
+
         # NOTE: agent is dead
         done = agent_hp == 0
         if done:
@@ -118,6 +118,5 @@ class SekiroEnv():
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
         self.last_agent_hp, self.last_agent_ep, self.last_boss_hp = state[-3:]
-        self.init_boss_hp = self.last_boss_hp
 
         return state
