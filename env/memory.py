@@ -6,8 +6,9 @@ from typing import Tuple
 import pymem
 from pymem import Pymem
 
-from .env_config import (GAME_NAME, MAX_AGENT_EP, MAX_AGENT_HP, MAX_BOSS_HP,
-                         MIN_CODE_LEN, MIN_HELPER_LEN, REVIVE_DELAY)
+from .env_config import (GAME_NAME, MAX_AGENT_EP, MAX_AGENT_HP, MAX_BOSS_EP,
+                         MAX_BOSS_HP, MIN_CODE_LEN, MIN_HELPER_LEN,
+                         REVIVE_DELAY)
 
 
 class CodeInjection():
@@ -175,10 +176,10 @@ class Memory():
         self.agent_code_injection.restoreMemory()
         self.boss_code_injection.restoreMemory()
 
-    def setCritical(self) -> None:
+    def resetEndurance(self) -> None:
         try:
             boss_mem_addr = self.boss_mem_ptr()
-            self.pm.write_int(boss_mem_addr + 0x148, 0)
+            self.pm.write_int(boss_mem_addr + 0x148, MAX_BOSS_EP)
         except Exception as e:
             logging.critical(e)
             self.restoreMemory()

@@ -66,6 +66,8 @@ class SekiroEnv():
             done            bool
             info            None
         """
+        self.memory.resetEndurance()
+
         lock_state = self.memory.lockBoss()
         logging.info(f"lock state: {lock_state}")
 
@@ -84,12 +86,12 @@ class SekiroEnv():
         reward = self.__stepReward(agent_hp, agent_ep, boss_hp)
 
         # HACK
-        if action_key != "attack" \
-                and boss_hp < self.last_boss_hp:
-            logging.critical(
-                f"STEP_DELAY {STEP_DELAY} too short. "
-                f"{action_key}: {self.last_boss_hp:.4f} --> {boss_hp:.4f}")
-            raise RuntimeError()
+        # if action_key != "attack" \
+        #         and boss_hp < self.last_boss_hp:
+        #     logging.critical(
+        #         f"STEP_DELAY {STEP_DELAY} too short. "
+        #         f"{action_key}: {self.last_boss_hp:.4f} --> {boss_hp:.4f}")
+        #     raise RuntimeError()
 
         # update last status
         self.last_agent_hp = agent_hp
