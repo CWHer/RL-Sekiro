@@ -44,9 +44,8 @@ class SekiroEnv():
         reward = weights.dot(rewards).item()
 
         reward = -20 if agent_hp == 0 else reward
-        reward = 50 if boss_hp - 0.5 > self.last_boss_hp else reward
+        reward = 50 if boss_hp > self.last_boss_hp else reward
 
-        logging.info(f"reward: {reward:<.2f}")
         return reward
 
     @timeLog
@@ -67,28 +66,35 @@ class SekiroEnv():
             done            bool
             info            None
         """
-        self.memory.setCritical(False)
-
         lock_state = self.memory.lockBoss()
         logging.info(f"lock state: {lock_state}")
 
         action_key = list(AGENT_KEYMAP.keys())[action]
-        self.actor.agentAction(action_key, action_delay=STEP_DELAY)
+        self.actor.agentAction(
+            action_key, action_delay=STEP_DELAY[action_key])
 
         screen_shot = self.observer.shotScreen()
         state = self.observer.state(screen_shot)
 
         agent_hp, agent_ep, boss_hp = state[-3:]
+        # NOTE: death of boss only influence "reward" not "done"
+        if boss_hp < 0.001:
+            self.memory.reviveBoss()
+            boss_hp = 1.00
         reward = self.__stepReward(agent_hp, agent_ep, boss_hp)
+
+        # HACK
+        if action_key != "attack" \
+                and boss_hp < self.last_boss_hp:
+            logging.critical(
+                f"STEP_DELAY {STEP_DELAY} too short. "
+                f"{action_key}: {self.last_boss_hp:.4f} --> {boss_hp:.4f}")
+            raise RuntimeError()
 
         # update last status
         self.last_agent_hp = agent_hp
         self.last_agent_ep = agent_ep
         self.last_boss_hp = boss_hp
-
-        # NOTE: death of boss only influence "reward" not "done"
-        if boss_hp < 0.005:
-            self.memory.setCritical(True)
 
         # NOTE: agent is dead
         done = agent_hp == 0
@@ -97,10 +103,14 @@ class SekiroEnv():
             self.memory.lockBoss()
             # HACK: view angle rotation time
             time.sleep(ROTATION_DELAY)
-            self.memory.reviveAgent()
+            self.memory.reviveAgent(need_delay=True)
             self.actor.envAction("pause")
             time.sleep(2)
 
+        logging.info(f"agent hp: {agent_hp:.4f}, "
+                     f"agent ep: {agent_ep:.4f}, "
+                     f"boss hp: {boss_hp:.4f}")
+        logging.info(f"reward: {reward:<.2f}, done: {done}")
         return state, reward, done, None
 
     def reset(self) -> Tuple[npt.NDArray[np.uint8], float, float, float]:
