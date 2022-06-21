@@ -62,6 +62,8 @@ if __name__ == "__main__":
 
 - [x] 尚未处理成功击败敌人的情况
 
+  :warning: 在敌人生命值极低时，强制修改敌人的耐力值为0，简化彻底击败敌人的过程
+  
   使用自定义的Mod修改敌人的生命数为`0xff`（credit to [Wendi Chen](https://github.com/ChenWendi2001)）
 
 
