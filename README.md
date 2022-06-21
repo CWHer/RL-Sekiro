@@ -61,6 +61,8 @@ if __name__ == "__main__":
 
 - [x] 尚未处理成功击败敌人的情况
 
+  :warning: 在敌人生命值极低时，强制修改敌人的耐力值为0，简化彻底击败敌人的过程
+  
   使用自定义的Mod修改敌人的生命数为`0xff`（credit to [Wendi Chen](https://github.com/ChenWendi2001)）
 
 
@@ -70,6 +72,8 @@ if __name__ == "__main__":
 
 - State
 
+  :warning: 当且仅当`agent`死亡时，`done`为`True`
+  
   | Variable   | Type                               | Description              |
   | ---------- | ---------------------------------- | ------------------------ |
   | focus area | `npt.NDArray[np.uint8]` (128, 128) | 截图的中心区域，灰度图像 |
@@ -78,6 +82,8 @@ if __name__ == "__main__":
   | boss hp    | `float` [0, 1]                     | 生命值，初始为1.000      |
   
 - Actions
+
+  包括`attack`、`defense`、`dodge`、`jump`
 
   ~~使用`pydirectinput`模拟按键~~，将`pydirectinput`的部分代码提取到了`keyboard.py`，加快按键速度
 
@@ -108,6 +114,7 @@ if __name__ == "__main__":
 
 - Reward
   
+  `death of agent`：-20，`death of boss`：50
   $$
   \begin{align}
   \text{reward} = & w_0 \times \left(\text{agent hp}-\text{last agent hp}\right) + \\
