@@ -6,8 +6,8 @@ from typing import Tuple
 import pymem
 from pymem import Pymem
 
-from .env_config import (GAME_NAME, MAX_EP, MAX_HP, MIN_CODE_LEN,
-                         MIN_HELPER_LEN, REVIVE_DELAY)
+from .env_config import (GAME_NAME, MAX_AGENT_EP, MAX_AGENT_HP, MAX_BOSS_HP,
+                         MIN_CODE_LEN, MIN_HELPER_LEN, REVIVE_DELAY)
 
 
 class CodeInjection():
@@ -122,7 +122,7 @@ class Memory():
         injected_code = b"\x53" + \
             b"\x48\xbb" + self.agent_mem_ptr.to_bytes(8, "little") + \
             b"\x48\x89\x0b" + b"\x5b"
-        self.health_code_injection = CodeInjection(
+        self.agent_code_injection = CodeInjection(
             self.pm, original_addr=health_read_addr + 5, original_code_len=7,
             helper_addr=health_read_addr + 0xd46, helper_code_len=13,
             code_addr=code_addr, injected_code=injected_code)
@@ -139,36 +139,31 @@ class Memory():
             raise RuntimeError()
         """[code injection]
         push    rbx
-        push    rcx
-        mov     rcx, critical_hit_mem_addr
-        mov     cx, [rcx]
-        mov     rbx, agent_mem_addr
+        mov     rbx, agent_mem_ptr
         cmp     [rbx], rdi
         je      done
-        cmp     cx, 00
-        je      done
-        xor     eax, eax
+        mov     rbx, boss_mem_ptr
+        mov     [rbx], rdi
 
         done:
-        pop     rcx
         pop     rbx
         """
         code_addr = self.pm.allocate(256)
-        self.critical_hit_mem_addr = self.pm.allocate(2)  # 2 bytes
-        injected_code = b"\x53" + b"\x51" + \
-            b"\x48\xb9" + self.critical_hit_mem_addr.to_bytes(8, "little") + \
-            b"\x66\x8b\x09" + \
+        self.boss_mem_ptr = self.pm.allocate(8)  # 8 bytes
+        injected_code = b"\x53" + \
             b"\x48\xbb" + self.agent_mem_ptr.to_bytes(8, "little") + \
-            b"\x48\x39\x3b" + b"\x0f\x84\x0c\x00\x00\x00" + \
-            b"\x66\x83\xf9\x00" + b"\x0f\x84\x02\x00\x00\x00" + \
-            b"\x31\xc0" + b"\x59" + b"\x5b"
-        self.guard_code_injection = CodeInjection(
+            b"\x48\x39\x3b" + b"\x0f\x84\x0d\x00\x00\x00" + \
+            b"\x48\xbb" + self.boss_mem_ptr.to_bytes(8, "little") + \
+            b"\x48\x89\x3b" + b"\x5b"
+        self.boss_code_injection = CodeInjection(
             self.pm, original_addr=guard_write_addr + 3, original_code_len=6,
             helper_addr=guard_write_addr + 0x33b, helper_code_len=13,
             code_addr=code_addr, injected_code=injected_code)
 
         self.agent_mem_ptr = partial(
             self.pm.read_ulonglong, self.agent_mem_ptr)
+        self.boss_mem_ptr = partial(
+            self.pm.read_ulonglong, self.boss_mem_ptr)
 
         # NOTE: automatic boss lock
         # HACK: sekiro.exe + 0x3d78058
@@ -177,13 +172,13 @@ class Memory():
         time.sleep(0.5)
 
     def restoreMemory(self) -> None:
-        self.health_code_injection.restoreMemory()
-        self.guard_code_injection.restoreMemory()
+        self.agent_code_injection.restoreMemory()
+        self.boss_code_injection.restoreMemory()
 
-    def setCritical(self, state: bool) -> None:
+    def setCritical(self) -> None:
         try:
-            self.pm.write_short(
-                self.critical_hit_mem_addr, int(state))
+            boss_mem_addr = self.boss_mem_ptr()
+            self.pm.write_int(boss_mem_addr + 0x148, 0)
         except Exception as e:
             logging.critical(e)
             self.restoreMemory()
@@ -216,29 +211,40 @@ class Memory():
             self.restoreMemory()
             raise RuntimeError()
 
-    def getStatus(self) -> Tuple[float, float]:
+    def getStatus(self) -> Tuple[float, float, float]:
         """[summary]
 
         Returns:
-            Tuple[float, float]:
-                agent hp    [0, 1]
-                agent ep    [0, 1]
+            agent hp    [0, 1]
+            agent ep    [0, 1]
+            boss hp     [0, 1]
         """
         try:
             agent_mem_addr = self.agent_mem_ptr()
             agent_hp = self.pm.read_int(agent_mem_addr + 0x130)
             agent_ep = self.pm.read_int(agent_mem_addr + 0x148)
-            return (agent_hp / MAX_HP, agent_ep / MAX_EP)
+            boss_mem_addr = self.boss_mem_ptr()
+            boss_hp = self.pm.read_int(boss_mem_addr + 0x130)
+            return (agent_hp / MAX_AGENT_HP, agent_ep / MAX_AGENT_EP, boss_hp / MAX_BOSS_HP)
         except Exception as e:
             logging.critical(e)
             self.restoreMemory()
             raise RuntimeError()
 
-    def reviveAgent(self) -> None:
+    def reviveAgent(self, need_delay: bool) -> None:
         try:
             agent_mem_addr = self.agent_mem_ptr()
-            self.pm.write_int(agent_mem_addr + 0x130, MAX_HP)
-            time.sleep(REVIVE_DELAY)
+            self.pm.write_int(agent_mem_addr + 0x130, MAX_AGENT_HP)
+            time.sleep(need_delay * REVIVE_DELAY)
+        except Exception as e:
+            logging.critical(e)
+            self.restoreMemory()
+            raise RuntimeError()
+
+    def reviveBoss(self) -> None:
+        try:
+            boss_mem_addr = self.boss_mem_ptr()
+            self.pm.write_int(boss_mem_addr + 0x130, MAX_BOSS_HP)
         except Exception as e:
             logging.critical(e)
             self.restoreMemory()
