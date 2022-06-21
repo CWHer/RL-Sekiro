@@ -6,7 +6,8 @@ import win32gui
 from icecream import ic
 
 from env.actions import Actor
-from env.env_config import ACTION_DELAY, GAME_NAME, REVIVE_DELAY
+from env.env_config import ACTION_DELAY, GAME_NAME, PAUSE_DELAY
+
 
 if __name__ == "__main__":
     # ic.disable()
@@ -24,14 +25,12 @@ if __name__ == "__main__":
     win32gui.SetForegroundWindow(handle)
     time.sleep(0.5)
 
-    actor = Actor(handle)
+    actor = Actor()
 
-    actor.envAction("resume", action_delay=ACTION_DELAY)
-    actor.envAction("focus", action_delay=ACTION_DELAY)
+    actor.envAction("resume", action_delay=PAUSE_DELAY)
 
-    actor.agentAction("attack", action_delay=ACTION_DELAY)
-    actor.agentAction("defense", action_delay=ACTION_DELAY)
-    actor.agentAction("dodge", action_delay=ACTION_DELAY)
-    actor.agentAction("jump", action_delay=ACTION_DELAY)
+    for _ in range(2):
+        for key in ["attack", "defense", "dodge", "jump"]:
+            actor.agentAction(key, action_delay=ACTION_DELAY[key])
 
     actor.envAction("pause")

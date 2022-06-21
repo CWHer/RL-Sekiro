@@ -1,6 +1,6 @@
 import time
 
-from env.env_config import ACTION_DELAY, AGENT_DEAD_DELAY, MAP_CENTER
+from env.env_config import AGENT_DEAD_DELAY, MAP_CENTER
 from env.memory import Memory
 
 
@@ -21,4 +21,4 @@ if __name__ == "__main__":
             memory.transportAgent(MAP_CENTER)
             lock_state = memory.lockBoss()
             memory.reviveAgent(need_delay=False)
-        time.sleep(ACTION_DELAY)
+        time.sleep(0.5)

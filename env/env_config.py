@@ -4,8 +4,22 @@ GAME_NAME = "Sekiro"
 # HACK: change accordingly
 PRESS_RELEASE_DELAY = 0.02
 
-STEP_DELAY = 0.15
-ACTION_DELAY = 0.25
+# NOTE: it takes time for action to take effect,
+#   STEP_DELAY ensures that the action matches its reward
+STEP_DELAY = {
+    "attack": 0.7,
+    "defense": 0.25,
+    "dodge": 0.5,
+    "jump": 0.6,
+}
+# NOTE: actions that are too frequent are ignored,
+#   ACTION DELAY represents the time between successive actions
+ACTION_DELAY = {
+    "attack": 0.6,
+    "defense": 0.4,
+    "dodge": 0.6,
+    "jump": 0.8,
+}
 
 AGENT_DEAD_DELAY = 10
 ROTATION_DELAY = 1
