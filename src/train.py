@@ -20,7 +20,7 @@ class Trainer():
         self.replay_buffer = ReplayBuffer()
 
         self.n_best = 0
-        self.best_reward = 1e-5
+        # self.best_reward = 1e-5
 
         self.env = SekiroEnv()
         self.seed = partial(
@@ -80,15 +80,14 @@ class Trainer():
                 self.__train(epoch=i)
 
             # >>>>> update model
-            if reward - self.best_reward \
-                    > TRAIN_CONFIG.update_thr:
+            if (i + 1) % TRAIN_CONFIG.save_freq == 0:
                 self.n_best += 1
                 self.agent.save(self.n_best)
-                self.best_reward = reward
+                # self.best_reward = reward
 
             self.writer.flush()
 
-        logging.info(f"best reward: {self.best_reward:<.2f}")
+        # logging.info(f"best reward: {self.best_reward:<.2f}")
 
 
 if __name__ == "__main__":
