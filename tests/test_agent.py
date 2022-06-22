@@ -4,7 +4,9 @@ import torch
 from icecream import ic
 
 from agent.d3qn import D3QN
+from env import SekiroEnv
 from train_utils import ReplayBuffer, playGame
+
 
 if __name__ == "__main__":
     ic.disable()
@@ -16,7 +18,8 @@ if __name__ == "__main__":
     replay_buffer = ReplayBuffer()
 
     # stage 1
-    episode_data, reward = playGame(agent, 19937)
+    env = SekiroEnv()
+    episode_data, reward = playGame(env, agent, 19937)
     replay_buffer.add(episode_data)
     replay_buffer.save("test")
 
