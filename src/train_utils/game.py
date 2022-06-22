@@ -17,13 +17,16 @@ def playGame(env, agent, seed: int) -> Tuple[List, float]:
     random.seed(seed)
 
     data_buffer = []
+    agent.resetState()
     state = env.reset()
+    state = agent.encodeState(-1, state)
     total_reward, done = 0, False
 
     while not done:
         # action = random.choice(env.actionSpace())
         action = agent.selectAction(state, env.actionSpace())
         next_state, reward, done, _ = env.step(action)
+        next_state = agent.encodeState(action, next_state)
         total_reward += reward
 
         # collect data

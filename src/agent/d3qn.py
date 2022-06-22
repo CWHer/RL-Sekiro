@@ -62,6 +62,13 @@ class D3QN():
             print("load optimizer {}".format(optimizer_dir))
             self.optimizer.load_state_dict(torch.load(optimizer_dir))
 
+    def resetState(self) -> None:
+        self.encoder.reset()
+
+    def encodeState(self, last_action, state):
+        self.encoder.update(last_action, state)
+        return self.encoder.state()
+
     def softUpdateTarget(self):
         for t_param, param in zip(
                 self.target_net.parameters(),
@@ -81,14 +88,14 @@ class D3QN():
         return q_values.detach().cpu().numpy()
 
     @timeLog
-    def selectAction(self, states, actions):
+    def selectAction(self, state, actions):
         def epsilonGreedy(q_values, actions, epsilon):
             return random.choice(actions) \
                 if np.random.rand() < epsilon \
                 else actions[q_values.argmax(axis=1).item()]
-        features = self.encoder.encode(states)
-        q_values = self.predict(features)
-        action = epsilonGreedy(q_values, actions, self.epsilon)
+        feature = self.encoder.encode(state)
+        q_value = self.predict(feature)
+        action = epsilonGreedy(q_value, actions, self.epsilon)
         return action
 
     def trainStep(self, data_batch: Tuple) -> float:

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -8,22 +8,47 @@ from config import AGENT_CONFIG
 
 
 class Encoder():
-    def encode(self, state: Tuple[npt.NDArray[np.uint8],
-                                  float, float, float, float]) \
-            -> npt.NDArray[np.float32]:
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.last_focus: Optional[npt.NDArray[np.uint8]] = None
+        self.last_action: Optional[int] = None
+        self.current_state = None
+
+    def update(self, last_action: int,
+               state: Tuple[npt.NDArray[np.uint8],
+                            float, float, float, float]) -> None:
+        self.last_focus = state[0] \
+            if self.current_state is None \
+            else self.current_state[0]
+        self.last_action = last_action
+        self.current_state = state
+
+    def state(self) -> Tuple[npt.NDArray[np.uint8],
+                             npt.NDArray[np.uint8],
+                             float, float, float, float, int]:
         """[summary]
 
         State:
+            last_focus      npt.NDArray[np.uint8]
             focus_area      npt.NDArray[np.uint8]
             agent_hp        float, [0, 1]
             agent_ep        float, [0, 1]
             boss_hp         float, [0, 1]
+            last_action     int, [-1, 4)
         """
-        focus_area = state[0].astype(np.float32) / 255
+        return (self.last_focus, *self.current_state, self.last_action)
+
+    def encode(self, state: Tuple[npt.NDArray[np.uint8],
+                                  npt.NDArray[np.uint8],
+                                  float, float, float, float, int]) \
+            -> npt.NDArray[np.float32]:
+        focus_areas = map(
+            lambda x: x.astype(np.float32) / 255, state[:2])
         attributes = map(lambda x: np.full(
-            focus_area.shape, x, dtype=np.float32) / 100, state[1:])
-        features = np.stack(
-            [focus_area] + list(attributes))
+            state[0].shape, x, dtype=np.float32), state[2:])
+        features = np.stack(list(focus_areas) + list(attributes))
         return features
 
 
