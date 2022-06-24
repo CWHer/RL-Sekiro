@@ -35,16 +35,16 @@ class SekiroEnv():
 
     def __stepReward(self, agent_hp, agent_ep, boss_hp) -> float:
         # TODO: refine reward
-        rewards = np.array(
-            [agent_hp - self.last_agent_hp,
-             min(0, agent_ep - self.last_agent_ep),
-             self.last_boss_hp - boss_hp])
-        weights = np.array(
-            [10, 5, 40 + 40 * (1 - self.last_boss_hp)])
-        reward = weights.dot(rewards).item()
+        reward = 40 * max(0, self.last_boss_hp - boss_hp)
 
-        reward = -20 if agent_hp == 0 else reward
-        reward = 50 if boss_hp > self.last_boss_hp else reward
+        reward = -10 if agent_hp == 0 else reward
+
+        # NOTE: stage rewards
+        stages = [0.2, 0.4, 0.6, 0.8]
+        rewards = [40, 30, 20, 10]
+        current, last = np.digitize([boss_hp, self.last_boss_hp], stages)
+        reward += sum(rewards[current:last]) if current <= last \
+            else sum(rewards[current:] + rewards[:last]) + 50
 
         return reward
 

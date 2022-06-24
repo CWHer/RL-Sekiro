@@ -19,10 +19,12 @@ class Actor():
             logging.critical("invalid agent action")
             raise RuntimeError()
 
-        key_code = self.agent_keymap[key]
-        PressKey(key_code)
+        key_codes = self.agent_keymap[key]
+        for key_code in key_codes:
+            PressKey(key_code)
         time.sleep(PRESS_RELEASE_DELAY)
-        ReleaseKey(key_code)
+        for key_code in key_codes:
+            ReleaseKey(key_code)
         logging.info(f"action: {key}")
 
         time.sleep(action_delay)
