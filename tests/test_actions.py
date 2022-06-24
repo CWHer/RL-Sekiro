@@ -30,7 +30,9 @@ if __name__ == "__main__":
     actor.envAction("resume", action_delay=PAUSE_DELAY)
 
     for _ in range(2):
-        for key in ["attack", "defense", "dodge", "jump"]:
+        for key in ["attack", "defense", "jump",
+                    "forward_dodge", "backward_dodge",
+                    "leftward_dodge", "rightward_dodge"]:
             actor.agentAction(key, action_delay=ACTION_DELAY[key])
 
     actor.envAction("pause")

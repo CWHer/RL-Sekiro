@@ -9,16 +9,22 @@ PRESS_RELEASE_DELAY = 0.02
 STEP_DELAY = {
     "attack": 0.7,
     "defense": 0.25,
-    "dodge": 0.5,
     "jump": 0.6,
+    "forward_dodge": 0.5,
+    "backward_dodge": 0.5,
+    "leftward_dodge": 0.5,
+    "rightward_dodge": 0.5,
 }
 # NOTE: actions that are too frequent are ignored,
 #   ACTION DELAY represents the time between successive actions
 ACTION_DELAY = {
     "attack": 0.6,
     "defense": 0.4,
-    "dodge": 0.6,
     "jump": 0.8,
+    "forward_dodge": 0.6,
+    "backward_dodge": 0.6,
+    "leftward_dodge": 0.6,
+    "rightward_dodge": 0.6,
 }
 
 AGENT_DEAD_DELAY = 10
@@ -28,10 +34,13 @@ PAUSE_DELAY = 0.8
 
 # NOTE: directX scan codes https://www.google.com/search?q=directInputKeyboardScanCodes
 AGENT_KEYMAP = {
-    "attack": 0x24,
-    "defense": 0x25,
-    "dodge": 0x2A,
-    "jump": 0x39,
+    "attack": [0x24],
+    "defense": [0x25],
+    "jump": [0x39],
+    "forward_dodge": [0x11, 0x2A],
+    "backward_dodge": [0x1F, 0x2A],
+    "leftward_dodge": [0x1E, 0x2A],
+    "rightward_dodge": [0x20, 0x2A],
 }
 
 ENV_KEYMAP = {
