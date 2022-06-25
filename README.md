@@ -39,7 +39,7 @@ if __name__ == "__main__":
 2. 调整游戏内设置
 
    - 使用窗口化进行游戏，修改分辨率为`1280x720`，将”质量设定“调整为中
-  
+    
    - 关闭”血腥效果“以及”字幕显示“，设置”亮度调整“为10
 
 3. 选择关卡："再战稀世强者"，”苇名弦一郎“，等待关卡载入结束后，按”esc“进行暂停
@@ -82,7 +82,7 @@ if __name__ == "__main__":
   
 - Actions
 
-  包括`attack`、`defense`、`dodge`、`jump`
+  包括`attack`、`defense`、`jump`、`forward dodge`、`backward dodge`、`rightward dodge`
 
   ~~使用`pydirectinput`模拟按键~~，将`pydirectinput`的部分代码提取到了`keyboard.py`，加快按键速度
 
@@ -98,13 +98,10 @@ if __name__ == "__main__":
 
 - Reward
   
-  `death of agent`：-20，`death of boss`：50
-  
   $$
   \begin{align}
-  \text{reward} = & w_0 \times \left(\text{agent hp}-\text{last agent hp}\right) + \\
-  &+ w_1 \times \min\left(0,\left(\text{agent ep}-\text{last agent ep}\right)\right) \\
-  &+ w_2 \times \left(\text{last boss hp}-\text{boss hp}\right) \\
+  \text{reward} = & w_0 \times \left(\text{agent hp}-\text{last agent hp}\right) \\
+  &+ w_1 \times \left(\text{last boss hp}-\text{boss hp}\right) \\
   \end{align}
   $$
   
