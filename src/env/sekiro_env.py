@@ -1,4 +1,5 @@
 import logging
+import random
 import time
 from typing import List, Tuple
 
@@ -40,7 +41,9 @@ class SekiroEnv():
              self.last_boss_hp - boss_hp
                 if boss_hp <= self.last_boss_hp
                 else self.last_boss_hp + 1 - boss_hp])
-        weights = np.array([10, 200])
+        weights = np.array(
+            [random.normalvariate(mu=20, sigma=2),
+             random.normalvariate(mu=100, sigma=10)])
         reward = weights.dot(rewards).item()
 
         return reward
