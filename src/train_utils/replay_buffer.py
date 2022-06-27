@@ -53,5 +53,6 @@ class ReplayBuffer():
     def sample(self) -> Tuple:
         indices = np.random.choice(
             len(self.buffer), DATA_CONFIG.batch_size)
-        data_batch = zip(*[self.buffer[i] for i in indices])
+        data_batch = map(lambda x: np.stack(x),
+                         zip(*[self.buffer[i] for i in indices]))
         return tuple(data_batch)

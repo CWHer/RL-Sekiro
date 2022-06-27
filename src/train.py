@@ -48,16 +48,19 @@ class Trainer():
     def __train(self, epoch):
         logging.info("train model")
 
-        mean_loss = 0
-        train_epochs = min(
-            TRAIN_CONFIG.train_epochs,
-            self.replay_buffer.size() // DATA_CONFIG.batch_size)
+        mean_q_loss, mean_auxiliary_loss = 0, 0
+        train_epochs = TRAIN_CONFIG.train_epochs
         for _ in tqdm(range(train_epochs)):
             data_batch = self.replay_buffer.sample()
-            loss = self.agent.trainStep(data_batch)
-            mean_loss += loss
-        mean_loss /= train_epochs
-        self.writer.add_scalar("loss", mean_loss, epoch)
+            q_loss, auxiliary_loss = \
+                self.agent.trainStep(data_batch)
+            mean_q_loss += q_loss
+            mean_auxiliary_loss += auxiliary_loss
+
+        self.writer.add_scalar(
+            "q_loss", mean_q_loss / train_epochs, epoch)
+        self.writer.add_scalar(
+            "auxiliary_loss", mean_auxiliary_loss / train_epochs, epoch)
 
     def run(self):
         """[summary]

@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Tuple
 
@@ -8,21 +9,27 @@ import torch.optim as optim
 from config import AGENT_CONFIG
 from utils import timeLog
 
-from .d3qn_utils import Encoder, VANet
+from .d3qn_utils import AuxiliaryNet, DuelNet, Encoder
 
 
 class D3QN():
     def __init__(self) -> None:
         self.device = torch.device("cpu")
-
         self.encoder = Encoder()
-        self.q_net = VANet().to(self.device)
-        # NOTE: target net is used for training
-        self.target_net = VANet().to(self.device)
+
+        self.q_net = DuelNet().to(self.device)
+        # NOTE: target net has no gradients
+        self.target_net = DuelNet().to(self.device)
+        self.target_net.eval()
+
+        self.auxiliary_net = AuxiliaryNet().to(self.device)
+        self.auxiliary_net.train()
 
         self.optimizer = optim.Adam(
-            self.q_net.parameters(),
-            lr=AGENT_CONFIG.learning_rate,
+            [{"params": self.q_net.parameters(),
+              "lr": AGENT_CONFIG.learning_rate},
+             {"params": self.auxiliary_net.parameters(),
+             "lr": AGENT_CONFIG.learning_rate * 10}],
             weight_decay=AGENT_CONFIG.l2_weight)
 
         self.epsilon = AGENT_CONFIG.init_epsilon
@@ -33,8 +40,10 @@ class D3QN():
 
     def setDevice(self, device: torch.device):
         self.device = device
+
         self.q_net.to(device)
         self.target_net.to(device)
+        self.auxiliary_net.to(device)
 
     def save(self, version):
         checkpoint_dir = AGENT_CONFIG.checkpoint_dir
@@ -43,23 +52,27 @@ class D3QN():
         if not os.path.exists(checkpoint_dir):
             os.mkdir(checkpoint_dir)
 
-        print(f"save network & optimizer / version({version})")
+        logging.info(f"save network & optimizer / version({version})")
         torch.save(
-            self.target_net.state_dict(),
+            {"q_net": self.q_net.state_dict(),
+             "target_net": self.target_net.state_dict(),
+             "auxiliary_net": self.auxiliary_net.state_dict(), },
             checkpoint_dir + f"/model_{version}")
         torch.save(
             self.optimizer.state_dict(),
             checkpoint_dir + f"/optimizer_{version}")
 
     def load(self, model_dir, optimizer_dir=None):
-        print("load network {}".format(model_dir))
+        logging.info(f"load network {model_dir}")
 
-        self.q_net.load_state_dict(torch.load(
-            model_dir, map_location=self.device))
-        self.target_net.load_state_dict(self.q_net.state_dict())
+        checkpoints = torch.load(
+            model_dir, map_location=self.device)
+        self.q_net.load_state_dict(checkpoints["q_net"])
+        self.target_net.load_state_dict(checkpoints["target_net"])
+        self.auxiliary_net.load_state_dict(checkpoints["auxiliary_net"])
 
         if not optimizer_dir is None:
-            print("load optimizer {}".format(optimizer_dir))
+            logging.info(f"load optimizer {optimizer_dir}")
             self.optimizer.load_state_dict(torch.load(optimizer_dir))
 
     def resetState(self) -> None:
@@ -77,14 +90,15 @@ class D3QN():
                 t_param.data * (1.0 - AGENT_CONFIG.tau) +
                 param.data * AGENT_CONFIG.tau)
 
-    def predict(self, features):
-        if features.ndim < 4:
-            features = np.expand_dims(features, 0)
+    def predict(self, frames, attributes):
+        self.q_net.eval()
 
-        features = torch.as_tensor(
-            features).float().to(self.device)
+        frames = torch.as_tensor(
+            np.expand_dims(frames, axis=1)).to(self.device)
+        attributes = torch.as_tensor(
+            np.expand_dims(attributes, axis=0)).to(self.device)
         with torch.no_grad():
-            q_values = self.q_net(features)
+            q_values, _ = self.q_net(frames, attributes)
         return q_values.detach().cpu().numpy()
 
     @timeLog
@@ -93,44 +107,65 @@ class D3QN():
             return random.choice(actions) \
                 if np.random.rand() < epsilon \
                 else actions[q_values.argmax(axis=1).item()]
-        feature = self.encoder.encode(state)
-        q_value = self.predict(feature)
+
+        frames = state[0].astype(np.float32) / 255
+        attributes = np.array(state[-4:], dtype=np.float32)
+        q_value = self.predict(frames, attributes)
         action = epsilonGreedy(q_value, actions, self.epsilon)
+
+        logging.info(q_value)
         return action
 
-    def trainStep(self, data_batch: Tuple) -> float:
+    def trainStep(self, data_batch: Tuple) -> Tuple[float, float]:
         """[summary]
 
         Returns:
-            loss
+            Tuple[float, float]: q_loss, auxiliary_loss
         """
-        states, rewards, actions, next_states, dones = data_batch
-        states = torch.as_tensor(np.stack(
-            [self.encoder.encode(state) for state in states])).to(self.device)
-        rewards = torch.as_tensor(
-            np.stack(rewards)).float().view(-1, 1).to(self.device)
-        actions = torch.as_tensor(
-            np.stack(actions)).long().view(-1, 1).to(self.device)
-        next_states = torch.as_tensor(np.stack(
-            [self.encoder.encode(state) for state in next_states])).to(self.device)
-        dones = torch.as_tensor(
-            np.stack(dones)).float().view(-1, 1).to(self.device)
+        self.q_net.train()
 
-        q_values = self.q_net(states).gather(1, actions)
+        states, rewards, actions, next_states, dones = data_batch
+        frames = torch.as_tensor(
+            np.stack(states[..., 0]).astype(np.float32) / 255).to(self.device)
+        attributes = torch.as_tensor(
+            np.array(states[..., -4:], dtype=np.float32)).to(self.device)
+        rewards = torch.as_tensor(rewards).float().view(-1, 1).to(self.device)
+        actions = torch.as_tensor(actions).long().view(-1, 1).to(self.device)
+        next_frames = torch.as_tensor(
+            np.stack(next_states[..., 0]).astype(np.float32) / 255).to(self.device)
+        next_attributes = torch.as_tensor(
+            np.array(next_states[..., -4:], dtype=np.float32)).to(self.device)
+        dones = torch.as_tensor(dones).float().view(-1, 1).to(self.device)
+
+        q_values, current_latent = self.q_net(frames, attributes)
+        q_values = q_values.gather(1, actions)
 
         with torch.no_grad():
-            max_actions = self.q_net(next_states).argmax(dim=1)
-            tq_values = self.target_net(
-                next_states).gather(1, max_actions.view(-1, 1))
+            max_actions = self.q_net(
+                next_frames, next_attributes)[0].argmax(dim=1)
+            tq_values, next_latent = \
+                self.target_net(next_frames, next_attributes)
+            tq_values = tq_values.gather(1, max_actions.view(-1, 1))
 
         q_targets = rewards + \
             (1 - dones) * AGENT_CONFIG.gamma * tq_values
-        loss = F.mse_loss(q_values, q_targets)
+        q_loss = F.mse_loss(q_values, q_targets)
 
+        # NOTE: auxiliary loss
+        # fmt: off
+        predicted_next_latent, predicted_actions, \
+            predicted_frames = self.auxiliary_net(current_latent, next_latent, actions)
+        auxiliary_loss = \
+            F.mse_loss(predicted_next_latent, next_latent) + \
+            F.cross_entropy(predicted_actions, actions.view(-1), ignore_index=-1) + \
+            F.mse_loss(predicted_frames, torch.cat([frames, next_frames], dim=0))
+        # fmt: on
+
+        loss = q_loss + auxiliary_loss
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
         self.softUpdateTarget()
 
-        return loss.item()
+        return q_loss.item(), auxiliary_loss.item()
