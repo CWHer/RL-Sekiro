@@ -161,6 +161,71 @@ class Memory():
             helper_addr=guard_write_addr + 0x33b, helper_code_len=13,
             code_addr=code_addr, injected_code=injected_code)
 
+        # NOTE: damage multiplier
+        """
+        48 ** ** ** 8B ** 89 ** ** ** 00 00 85 C0 7F
+        """
+        bytes_pattern = b"\x48...\x8b.\x89...\x00\x00\x85\xc0\x7f"
+        damage_write_addr = pymem.pattern.pattern_scan_module(
+            self.pm.process_handle, module_game, bytes_pattern)
+        if damage_write_addr is None:
+            logging.critical("damage_write_addr scan failed")
+            raise RuntimeError()
+        """[code injection]
+        push    rcx
+        push    rbx
+        push    rdx
+        mov     rdx, damage2boss_multiplier
+        mov     rcx, agent_mem_ptr
+        cmp     [rcx], rbx
+        jne     calc
+        mov     rdx, damage2agent_multiplier
+        lea     rdx, [rdx]
+        
+        calc:
+        test    eax, eax
+        jz      done
+        lea     rbx, [rbx+130]
+        cmp     [rbx], eax
+        jle     done
+        mov     ecx, [rbx]
+        sub     ecx, eax
+        push    rcx
+        fild    dword ptr [rsp]
+        fmul    dword ptr [rdx]
+        fistp   dword ptr [rsp]
+        pop     rcx
+        mov     eax, [rbx]
+        sub     eax, ecx
+        jns     done
+        xor     eax, eax
+
+        done:
+        pop     rdx
+        pop     rbx
+        pop     rcx
+        """
+        code_addr = self.pm.allocate(256)
+        damage2boss_multiplier = self.pm.allocate(4)  # 4 bytes
+        self.pm.write_float(damage2boss_multiplier, 2.0)
+        damage2agent_multiplier = self.pm.allocate(4)
+        self.pm.write_float(damage2agent_multiplier, 0.2)
+        injected_code = b"\x51\x53\x52" + \
+            b"\x48\xba" + damage2boss_multiplier.to_bytes(8, "little") + \
+            b"\x48\xb9" + self.agent_mem_ptr.to_bytes(8, "little") + \
+            b"\x48\x39\x19" + b"\x0f\x85\x0d\x00\x00\x00" + \
+            b"\x48\xba" + damage2agent_multiplier.to_bytes(8, "little") + b"\x48\x8d\x12" + \
+            b"\x85\xc0" + b"\x0f\x84\x29\x00\x00\x00" + \
+            b"\x48\x8d\x9b\x30\x01\x00\x00" + b"\x39\x03" + \
+            b"\x0f\x8e\x1a\x00\x00\x00" + b"\x8b\x0b" + b"\x29\xc1" + \
+            b"\x51" + b"\xdb\x04\x24\xd8\x0a\xdb\x1c\x24" + b"\x59" + \
+            b"\x8b\x03" + b"\x29\xc8" + b"\x0f\x89\x02\x00\x00\x00" + b"\x31\xc0" + \
+            b"\x5A\x5B\x59"
+        self.damage_code_injection = CodeInjection(
+            self.pm, original_addr=damage_write_addr + 6, original_code_len=6,
+            helper_addr=damage_write_addr + 0x1a59, helper_code_len=13,
+            code_addr=code_addr, injected_code=injected_code)
+
         self.agent_mem_ptr = partial(
             self.pm.read_ulonglong, self.agent_mem_ptr)
         self.boss_mem_ptr = partial(
@@ -175,6 +240,7 @@ class Memory():
     def restoreMemory(self) -> None:
         self.agent_code_injection.restoreMemory()
         self.boss_code_injection.restoreMemory()
+        self.damage_code_injection.restoreMemory()
 
     def resetEndurance(self) -> None:
         try:

@@ -77,7 +77,7 @@ class SekiroEnv():
 
         agent_hp, agent_ep, boss_hp = state[-3:]
         # NOTE: death of boss only influence "reward" not "done"
-        if boss_hp < 0.05:
+        if boss_hp < 0.1:
             self.memory.reviveBoss()
             boss_hp = 1.00
         reward = self.__stepReward(agent_hp, agent_ep, boss_hp)
