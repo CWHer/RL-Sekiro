@@ -26,6 +26,10 @@ if __name__ == "__main__":
             state, reward, done, _ = env.step(action)
 ```
 
+## 游戏版本要求
+
+:warning: 本训练环境支持《只狼：影逝二度》`v1.06`，请确认本地游戏版本
+
 
 
 ## Getting Started
