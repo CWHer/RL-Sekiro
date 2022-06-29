@@ -90,7 +90,7 @@ if __name__ == "__main__":
   
 - Actions
 
-  包括`attack`、`defense`、`jump`、`forward dodge`、`backward dodge`、`rightward dodge`
+  包括`attack`、`defense`、`jump`、`forward dodge`、`backward dodge`、`leftward dodge`、`rightward dodge`
 
   ~~使用`pydirectinput`模拟按键~~，将`pydirectinput`的部分代码提取到了`keyboard.py`，加快按键速度
 
