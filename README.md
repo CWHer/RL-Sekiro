@@ -25,6 +25,10 @@ if __name__ == "__main__":
             state, reward, done, _ = env.step(action)
 ```
 
+## 游戏版本要求
+
+:warning: 本训练环境支持《只狼：影逝二度》`v1.06`，请确认本地游戏版本
+
 
 
 ## Getting Started
@@ -38,7 +42,7 @@ if __name__ == "__main__":
 2. 调整游戏内设置
 
    - 使用窗口化进行游戏，修改分辨率为`1280x720`，将”质量设定“调整为中
-  
+   
    - 关闭”血腥效果“以及”字幕显示“，设置”亮度调整“为10
 
 3. 选择关卡："再战稀世强者"，”苇名弦一郎“，等待关卡载入结束后，按”esc“进行暂停
@@ -62,8 +66,12 @@ if __name__ == "__main__":
 - [x] 尚未处理成功击败敌人的情况
 
   :warning: 在敌人生命值极低时，直接复活敌人，并认为成功击败了敌人
-  
-  
+
+- [x] 敌人攻击力过高，负样本占比过高
+
+  :warning: 修改人物/敌人的攻击力
+
+
 
 
 ## Details
@@ -74,14 +82,14 @@ if __name__ == "__main__":
   
   | Variable   | Type                               | Description              |
   | ---------- | ---------------------------------- | ------------------------ |
-  | focus area | `npt.NDArray[np.uint8]` (128, 128) | 截图的中心区域，灰度图像 |
+  | focus area | `npt.NDArray[np.uint8]` (128, 128) | 截图的中心区域，RGB图像 |
   | agent hp   | `float` [0, 1]                     | 生命值，初始为1.000      |
   | agent ep   | `float` [0, 1]                     | 耐力值，初始为1.000      |
   | boss hp    | `float` [0, 1]                     | 生命值，初始为1.000      |
   
 - Actions
 
-  包括`attack`、`defense`、`dodge`、`jump`
+  包括`attack`、`defense`、`jump`、`forward dodge`、`backward dodge`、`leftward dodge`、`rightward dodge`
 
   ~~使用`pydirectinput`模拟按键~~，将`pydirectinput`的部分代码提取到了`keyboard.py`，加快按键速度
 
@@ -91,19 +99,16 @@ if __name__ == "__main__":
 
 - Memory
 
-  读取游戏内存，执行代码注入，获取人物的生命值/耐力值以及敌人的生命值
+  读取游戏内存，执行代码注入，获取人物的生命值/耐力值以及敌人的生命值, 修改人物/敌人的攻击力
 
   `restoreMemory()`撤销代码注入，在程序终止的时候必须被执行 :warning:
 
 - Reward
   
-  `death of agent`：-20，`death of boss`：50
-  
   $$
   \begin{align}
-  \text{reward} = & w_0 \times \left(\text{agent hp}-\text{last agent hp}\right) + \\
-  &+ w_1 \times \min\left(0,\left(\text{agent ep}-\text{last agent ep}\right)\right) \\
-  &+ w_2 \times \left(\text{last boss hp}-\text{boss hp}\right) \\
+  \text{reward} = & w_0 \times \left(\text{agent hp}-\text{last agent hp}\right) \\
+  &+ w_1 \times \left(\text{last boss hp}-\text{boss hp}\right) \\
   \end{align}
   $$
   
