@@ -94,7 +94,7 @@ class D3QN():
         self.q_net.eval()
 
         frames = torch.as_tensor(
-            np.expand_dims(frames, axis=1)).to(self.device)
+            np.expand_dims(frames, axis=0)).to(self.device)
         attributes = torch.as_tensor(
             np.expand_dims(attributes, axis=0)).to(self.device)
         with torch.no_grad():

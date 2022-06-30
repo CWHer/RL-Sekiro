@@ -42,8 +42,8 @@ class SekiroEnv():
                 if boss_hp <= self.last_boss_hp
                 else self.last_boss_hp + 1 - boss_hp])
         weights = np.array(
-            [random.normalvariate(mu=20, sigma=2),
-             random.normalvariate(mu=100, sigma=10)])
+            [random.normalvariate(mu=20, sigma=4),
+             random.normalvariate(mu=40, sigma=5)])
         reward = weights.dot(rewards).item()
 
         return reward
@@ -55,7 +55,7 @@ class SekiroEnv():
         """[summary]
 
         State:
-            focus_area      npt.NDArray[np.uint8], "L"
+            focus_area      npt.NDArray[np.uint8], "RGB"
             agent_hp        float, [0, 1]
             agent_ep        float, [0, 1]
             boss_hp         float, [0, 1]
@@ -80,7 +80,7 @@ class SekiroEnv():
 
         agent_hp, agent_ep, boss_hp = state[-3:]
         # NOTE: death of boss only influence "reward" not "done"
-        if boss_hp < 0.05:
+        if boss_hp < 0.1:
             self.memory.reviveBoss()
             boss_hp = 1.00
         reward = self.__stepReward(agent_hp, agent_ep, boss_hp)

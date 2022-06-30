@@ -27,14 +27,13 @@ class Encoder():
         """[summary]
 
         State:
-            focus_area      npt.NDArray[np.uint8], C x H x W
+            focus_area      npt.NDArray[np.uint8], "RGB", C x H x W
             agent_hp        float, [0, 1]
             agent_ep        float, [0, 1]
             boss_hp         float, [0, 1]
             last_action     float, {-1, 0, ..., 6}
         """
-        return (np.expand_dims(self.current_state[0], axis=0),
-                *self.current_state[1:], float(self.last_action))
+        return (*self.current_state, float(self.last_action))
 
 
 class ResBlock(nn.Module):
@@ -96,7 +95,7 @@ class AuxiliaryNet(nn.Module):
                                    kernel_size=2, stride=2),
             *(ResBlock(n_channels * 8)
               for _ in range(AGENT_CONFIG.n_res)),
-            nn.LazyConv2d(out_channels=1, kernel_size=3, padding=1),
+            nn.LazyConv2d(out_channels=3, kernel_size=3, padding=1),
         )
 
     def forward(self,
@@ -129,7 +128,7 @@ class DuelNet(nn.Module):
         n_channels = AGENT_CONFIG.n_channels
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=1,
+            nn.Conv2d(in_channels=3,
                       out_channels=n_channels,
                       kernel_size=3, padding=1),
             *(ResBlock(n_channels)

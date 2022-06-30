@@ -99,7 +99,7 @@ class Observer():
         """[summary]
 
         State:
-            image           npt.NDArray[np.uint8]
+            focus_area      npt.NDArray[np.uint8], "RGB"
             agent_hp        float, [0, 1]
             agent_ep        float, [0, 1]
             boss_hp         float, [0, 1]
@@ -115,10 +115,10 @@ class Observer():
         #     target=self.boss_hp_full, threshold=0.4, prefix="boss-hp")
 
         focus_area = Image.fromarray(self.__select(
-            screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8)).convert("L")
+            screen_shot, FOCUS_ANCHOR).transpose(1, 2, 0).astype(np.uint8))
         if ic.enabled:
             focus_area.save(f"./debug/focus-{self.timestamp}.png")
         focus_area = np.array(
-            focus_area.resize(FOCUS_SIZE), dtype=np.uint8)
+            focus_area.resize(FOCUS_SIZE), dtype=np.uint8).transpose(2, 0, 1)
 
         return focus_area, agent_hp, agent_ep, boss_hp

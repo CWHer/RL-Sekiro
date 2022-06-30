@@ -3,16 +3,16 @@ from collections import namedtuple
 AGENT_CONFIG = {
     "checkpoint_dir": "checkpoint",
 
-    "action_size": 4,
+    "n_action": 7,
     "gamma": 0.98,
 
     # features
     # "n_periods": 4,
 
-    # AGENT architecture
-    "in_channels": 6,
-    "n_res": 5,
-    "n_channels": 64,
+    # network architecture
+    "n_res": 4,
+    "n_channels": 32,
+    "hidden_size": 256,
 
     # optimizer
     "learning_rate": 0.001,
@@ -22,9 +22,9 @@ AGENT_CONFIG = {
     "tau": 0.1,
 
     # epsilon-greedy
-    "init_epsilon": 0.8,
+    "init_epsilon": 0.9,
     "min_epsilon": 0.1,
-    "delta_epsilon": 0.005
+    "delta_epsilon": 0.004
 }
 
 DATA_CONFIG = {
@@ -33,8 +33,8 @@ DATA_CONFIG = {
     "replay_size": 100000,
 
     # sample
-    "train_thr": 80,
-    "batch_size": 64,
+    "train_thr": 200,
+    "batch_size": 32,
 }
 
 TRAIN_CONFIG = {
@@ -42,13 +42,13 @@ TRAIN_CONFIG = {
     "log_dir": "logs/",
 
     # total
-    "epochs": 1000,
+    "epochs": 500,
 
     # explore the environment
     "n_game": 2,
 
     # update the model
-    "train_epochs": 2,
+    "train_epochs": 5,
 
     # save the model
     "save_freq": 50,
